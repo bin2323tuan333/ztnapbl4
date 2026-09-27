@@ -18,7 +18,6 @@ import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 public class ConnectorClient {
-
     private static final Logger log = LoggerFactory.getLogger(ConnectorClient.class);
 
     private final ConnectorConfig config;

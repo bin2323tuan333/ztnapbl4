@@ -13,20 +13,17 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 public class NettyConfig {
-
-    private static final Logger log = LoggerFactory.getLogger(NettyConfig.class);
-
     private final ZtnaProperties props;
     private final WsPathRouter wsPathRouter;
 
-    private EventLoopGroup boss;
-    private EventLoopGroup worker;
+    private EventLoopGroup connection;
+    private EventLoopGroup handler;
     private Channel serverChannel;
 
     public NettyConfig(ZtnaProperties props, WsPathRouter wsPathRouter) {
@@ -36,11 +33,11 @@ public class NettyConfig {
 
     @PostConstruct
     public void start() throws InterruptedException {
-        boss = new NioEventLoopGroup(props.getNetty().getBossThreads());
-        worker = new NioEventLoopGroup(props.getNetty().getWorkerThreads());
+        connection = new NioEventLoopGroup(props.getNetty().getBossThreads());
+        handler = new NioEventLoopGroup(props.getNetty().getWorkerThreads());
 
         ServerBootstrap b = new ServerBootstrap();
-        b.group(boss, worker)
+        b.group(connection, handler)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
@@ -60,8 +57,8 @@ public class NettyConfig {
     @PreDestroy
     public void stop() {
         if (serverChannel != null) serverChannel.close();
-        if (boss != null) boss.shutdownGracefully();
-        if (worker != null) worker.shutdownGracefully();
+        if (connection != null) connection.shutdownGracefully();
+        if (handler != null) handler.shutdownGracefully();
         log.info("Netty stopped");
     }
 }
