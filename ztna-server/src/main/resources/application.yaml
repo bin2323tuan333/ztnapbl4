@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: ztna-server
+
+ztna:
+  netty:
+    port: 8443
+    boss-threads: 1
+    worker-threads: 4
+  jwt:
+    secret: change-me-min-32-bytes-long-secret-please
+    ttl-minutes: 60
+  connector:
+    token: "connector-demo-token-abc123"
