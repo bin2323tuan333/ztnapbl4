@@ -1,4 +1,4 @@
-package org.example.ztna_connector;
+package com.example;
 
 
 import io.netty.bootstrap.Bootstrap;
@@ -32,14 +32,14 @@ public class ConnectorClient {
             try {
                 connectOnce();
             } catch (Exception e) {
-                log.error("Connection failed: {}. Reconnecting in 5s...", e.getMessage());
+                log.error("Connection failed: {}", e.getMessage());
             }
             TimeUnit.SECONDS.sleep(5);
         }
     }
 
     private void connectOnce() throws Exception {
-        URI uri = URI.create(config.serverUrl());
+        URI uri = URI.create(config.getServerUrl());
         String host = uri.getHost();
         int port = uri.getPort() == -1 ? 80 : uri.getPort();
 
@@ -52,18 +52,21 @@ public class ConnectorClient {
                         ChannelPipeline p = ch.pipeline();
                         p.addLast(new HttpClientCodec());
                         p.addLast(new HttpObjectAggregator(65536));
-
                         DefaultHttpHeaders headers = new DefaultHttpHeaders();
-                        headers.add("Authorization", "Bearer " + config.token());
-
+                        headers.add("Authorization", "Bearer " + config.getToken());
                         p.addLast(new WebSocketClientProtocolHandler(
-                                uri, WebSocketVersion.V13, null, false, headers, 1024 * 1024));
+                                uri,
+                                WebSocketVersion.V13,
+                                null,
+                                false,
+                                headers,
+                                1024 * 1024));
                         p.addLast(new ConnectorHandler(config));
                     }
                 });
 
         Channel channel = b.connect(host, port).sync().channel();
-        log.info("Connected to {}", config.serverUrl());
+        log.info("Connected to {}", config.getServerUrl());
         channel.closeFuture().sync();
         log.info("Disconnected. Reconnecting...");
     }

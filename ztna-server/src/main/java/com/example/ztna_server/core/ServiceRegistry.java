@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -30,6 +31,9 @@ public class ServiceRegistry {
         log.info("Unregistered connector {}", session.getId());
     }
 
+    public Optional<ConnectorSession> findConnectorByService(String service) {
+        return Optional.ofNullable(connectors.get(service));
+    }
 
     public ConnectorSession get(String service) {
         return connectors.get(service);

@@ -1,5 +1,6 @@
-package org.example.ztna_connector;
+package com.example;
 
+import com.example.ConnectorConfig;
 
 import java.util.Map;
 

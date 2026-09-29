@@ -1,34 +1,25 @@
-package org.example.ztna_connector;
+package main.java.com.example.ztna_connector;
 
-import com.example.ztna_connector.protocol.FrameCodec;
-import com.example.ztna_connector.tcp.TcpSession;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
-import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import org.example.ztna_connector.protocol.FrameType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+
+import com.sun.jdi.Bootstrap;
+
+import java.nio.channels.Channel;
+import java.nio.channels.SocketChannel;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
     private static final Logger log = LoggerFactory.getLogger(ConnectorHandler.class);
 
-    private final ConnectorConfig config;
+    private final main.java.com.example.ztna_connector.ConnectorConfig config;
     private final ObjectMapper mapper = new ObjectMapper();
     private final Map<Long, TcpSession> sessions = new ConcurrentHashMap<>();
 
-    public ConnectorHandler(ConnectorConfig config) {
+    public ConnectorHandler(main.java.com.example.ztna_connector.ConnectorConfig config) {
         this.config = config;
     }
 
@@ -36,7 +27,7 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt == WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
             log.info("WS handshake complete");
-            List<String> services = List.copyOf(config.services().keySet());
+            List<String> services = List.copyOf(config.getServices().keySet());
             String json = mapper.writeValueAsString(services);
             ctx.writeAndFlush(new TextWebSocketFrame(json));
             log.info("Registered services: {}", services);
@@ -55,9 +46,9 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
         ByteBuf buf = bin.content();
         byte type = FrameCodec.peekType(buf);
         switch (type) {
-            case FrameType.CONNECT -> handleConnect(ctx, buf);
-            case FrameType.DATA    -> handleData(buf);
-            case FrameType.CLOSE   -> handleClose(buf);
+            case main.java.com.example.ztna_connector.protocol.FrameType.CONNECT -> handleConnect(ctx, buf);
+            case main.java.com.example.ztna_connector.protocol.FrameType.DATA    -> handleData(buf);
+            case main.java.com.example.ztna_connector.protocol.FrameType.CLOSE   -> handleClose(buf);
             default -> log.warn("Unknown frame type: {}", type);
         }
     }
@@ -68,7 +59,7 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
         String service = header.service();
         log.info("CONNECT: streamId={} service={}", streamId, service);
 
-        String target = config.services().get(service);
+        String target = config.getServices().get(service);
         if (target == null) {
             log.warn("Unknown service: {}", service);
             sendClose(ctx, streamId);
