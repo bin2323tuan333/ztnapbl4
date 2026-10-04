@@ -93,14 +93,12 @@ public class UserWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         ConnectFrame cf;
         try {
             cf = Frame.decodeConnect(buf);
+            log.info("\n{ \n\tID: {}, \n\tService: {}, \n\tJwt: {}\n}", cf.getStreamId(), cf.getService(), cf.getJwt());
         } catch (Exception e) {
             log.error("Malformed CONNECT frame", e);
             ctx.close();
             return;
         }
-
-        log.info("CONNECT: service={}, jwt={}",
-                cf.getService(), truncate(cf.getJwt()));
 
         String userId = verifyJwt(cf.getJwt());
         if (userId == null) {
@@ -122,8 +120,7 @@ public class UserWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         }
 
         int streamId = idGenerator.next();
-        log.info("Server assigned streamId={} for user {} service {}",
-                streamId, userId, cf.getService());
+        log.info("Server assigned streamId={} for user {} service {}", streamId, userId, cf.getService());
 
         streamManager.register(
                 streamId,
@@ -132,9 +129,14 @@ public class UserWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
                 cf.getService()
         );
 
-        sendConnectAck(ctx, streamId, FrameType.STATUS_OK, null);
+        sendConnectAck(
+                ctx,
+                streamId,
+                FrameType.STATUS_OK,
+                null
+        );
 
-        ByteBuf out = Frame.encodeConnect(ctx.alloc(), cf.getService(), cf.getJwt());
+        ByteBuf out = Frame.encodeConnect(ctx.alloc(), cf.getStreamId(),cf.getService(), cf.getJwt());
         connector.getChannel().writeAndFlush(new BinaryWebSocketFrame(out));
 
         log.info("CONNECT forwarded to connector {}", connector.getId());
@@ -189,8 +191,7 @@ public class UserWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         }
     }
 
-    private void sendConnectAck(ChannelHandlerContext ctx,
-                                int streamId, byte status, String reason) {
+    private void sendConnectAck(ChannelHandlerContext ctx, int streamId, byte status, String reason) {
         ByteBuf out = Frame.encodeConnectAck(ctx.alloc(), streamId, status, reason);
         ctx.writeAndFlush(new BinaryWebSocketFrame(out));
     }

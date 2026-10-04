@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ConnectFrame {
+    private int streamId;
     private String service;
     private String jwt;
 }

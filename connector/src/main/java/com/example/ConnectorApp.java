@@ -1,11 +1,13 @@
-package com.example;
+package com.example.ws;
 
-import com.example.ConnectorConfig;
+import com.example.tcp.TcpClient;
+import com.example.tcp.TcpSessionManager;
 
 import java.util.Map;
 
 public class ConnectorApp {
-    public static void main(String[] args) throws Exception {
+
+    public static void main(String[] args) {
         ConnectorConfig config = new ConnectorConfig(
                 "ws://localhost:8443/ws/connector",
                 "connector-demo-token-abc123",
@@ -15,6 +17,18 @@ public class ConnectorApp {
                         "mysql", "127.0.0.1:3307"
                 )
         );
-        new ConnectorClient(config).start();
+
+        TcpSessionManager sessionManager = new TcpSessionManager();
+        TcpClient tcpClient = new TcpClient(sessionManager);
+
+        ConnectorClient client = new ConnectorClient(config, () -> new ConnectorHandler(config, tcpClient, sessionManager));
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Shutdown signal received");
+            client.stop();
+            sessionManager.closeAll();
+        }, "shutdown-hook"));
+
+        client.start();
     }
 }

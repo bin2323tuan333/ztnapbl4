@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBufAllocator;
 
 import java.nio.charset.StandardCharsets;
 
+
 public final class Frame {
 
     private Frame() {}
@@ -13,17 +14,14 @@ public final class Frame {
         return buf.getByte(buf.readerIndex());
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // CONNECT — Không có streamId
-    // Layout: [type:1][svcLen:2][service:N][jwtLen:2][jwt:M]
-    // ═══════════════════════════════════════════════════════════════
-    public static ByteBuf encodeConnect(ByteBufAllocator alloc,
-                                        String service, String jwt) {
+    // CONNECT: [type:1][streamId:4][svcLen:2][service:N][jwtLen:2][jwt:M]
+    public static ByteBuf encodeConnect(ByteBufAllocator alloc, int streamId, String service, String jwt) {
         byte[] svc = service.getBytes(StandardCharsets.UTF_8);
-        byte[] j = jwt.getBytes(StandardCharsets.UTF_8);
+        byte[] j = jwt == null ? new byte[0] : jwt.getBytes(StandardCharsets.UTF_8);
 
-        ByteBuf buf = alloc.buffer(1 + 2 + svc.length + 2 + j.length);
+        ByteBuf buf = alloc.buffer(1 + 4 + 2 + svc.length + 2 + j.length);
         buf.writeByte(FrameType.CONNECT);
+        buf.writeInt(streamId);
         buf.writeShort(svc.length);
         buf.writeBytes(svc);
         buf.writeShort(j.length);
@@ -33,6 +31,7 @@ public final class Frame {
 
     public static ConnectFrame decodeConnect(ByteBuf buf) {
         buf.readByte();
+        int streamId = buf.readInt();
         int svcLen = buf.readUnsignedShort();
         byte[] svc = new byte[svcLen];
         buf.readBytes(svc);
@@ -41,16 +40,15 @@ public final class Frame {
         buf.readBytes(jwt);
 
         return new ConnectFrame(
+                streamId,
                 new String(svc, StandardCharsets.UTF_8),
                 new String(jwt, StandardCharsets.UTF_8)
         );
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // CONNECT_ACK — Có streamId (server cấp)
-    // Layout: [type:1][streamId:4][status:1][reasonLen:2][reason:K]
-    // ═══════════════════════════════════════════════════════════════
-    public static ByteBuf encodeConnectAck(ByteBufAllocator alloc, int streamId, byte status, String reason) {
+    // CONNECT_ACK: [type:1][streamId:4][status:1][reasonLen:2][reason:K]
+    public static ByteBuf encodeConnectAck(ByteBufAllocator alloc, int streamId,
+                                           byte status, String reason) {
         byte[] r = reason == null ? new byte[0] : reason.getBytes(StandardCharsets.UTF_8);
 
         ByteBuf buf = alloc.buffer(1 + 4 + 1 + 2 + r.length);
@@ -76,9 +74,7 @@ public final class Frame {
         return new ConnectAckFrame(streamId, status, reason);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // DATA
-    // ═══════════════════════════════════════════════════════════════
+    // DATA — [type:1][streamId:4][dataLen:4][data:N]
     public static ByteBuf encodeData(ByteBufAllocator alloc, int streamId, byte[] data) {
         ByteBuf buf = alloc.buffer(1 + 4 + 4 + data.length);
         buf.writeByte(FrameType.DATA);
@@ -94,12 +90,10 @@ public final class Frame {
         int dataLen = buf.readInt();
         byte[] data = new byte[dataLen];
         buf.readBytes(data);
-        return new DataFrame(streamId,dataLen, data);
+        return new DataFrame(streamId, dataLen, data);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // CLOSE
-    // ═══════════════════════════════════════════════════════════════
+    // CLOSE — [type:1][streamId:4][reason:1]
     public static ByteBuf encodeClose(ByteBufAllocator alloc, int streamId) {
         return encodeClose(alloc, streamId, (byte) 0);
     }
