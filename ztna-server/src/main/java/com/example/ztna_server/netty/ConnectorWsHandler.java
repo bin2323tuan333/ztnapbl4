@@ -11,17 +11,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.*;
 import io.netty.util.AttributeKey;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,6 +35,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
     public ConnectorWsHandler(ServiceRegistry registry, StreamManager streamManager) {
         this.registry = registry;
         this.streamManager = streamManager;
+
     }
 
     @Override
@@ -112,6 +108,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
 
         } catch (Exception e) {
             log.error("Failed to parse connector services from bytes", e);
+
             ctx.close();
         }
     }
@@ -163,6 +160,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
             user.writeAndFlush(new BinaryWebSocketFrame(out));
         }
     }
+
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {

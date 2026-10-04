@@ -17,6 +17,19 @@ User ──WSS──> ZTNA Server <──WSS── Connector ──TCP──> Ap
 
 ### 2. ZTNA Connector
 
+cd ztna-server
+./mvnw spring-boot:run
+
+Server listen:
+- Port 8080 — REST API
+- Port 8443 — WebSocket
+
+### 2. ZTNA Connector
+
+cd ztna-connector
+./mvnw clean package
+java -jar target/ztna-connector-0.0.1-SNAPSHOT.jar
+
 
 ## Công nghệ
 
@@ -26,3 +39,4 @@ User ──WSS──> ZTNA Server <──WSS── Connector ──TCP──> Ap
 - JWT
 
 ## Tác giả
+

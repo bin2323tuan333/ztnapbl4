@@ -36,6 +36,7 @@ public class NettyConfig {
                        UserWsHandler userWsHandler) {
         this.connectorWsHandler = connectorWsHandler;
         this.userWsHandler = userWsHandler;
+
     }
 
     @PostConstruct

@@ -12,4 +12,5 @@ public class ZtnaServerApplication {
 		SpringApplication.run(ZtnaServerApplication.class, args);
 	}
 //	Làm routing table cho ztna server và connector
+
 }
