@@ -15,6 +15,11 @@ User ──WSS──> ZTNA Server <──WSS── Connector ──TCP──> Ap
 
 ### 1. ZTNA Server
 
+<<<<<<< HEAD
+=======
+### 2. ZTNA Connector
+
+>>>>>>> 7854d77 (Audit log)
 cd ztna-server
 ./mvnw spring-boot:run
 
@@ -28,16 +33,26 @@ cd ztna-connector
 ./mvnw clean package
 java -jar target/ztna-connector-0.0.1-SNAPSHOT.jar
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 7854d77 (Audit log)
 ## Công nghệ
 
 - Java 21
 - Spring Boot 4.1.1
 - Netty 4.1.115
+<<<<<<< HEAD
 - SQLite
+=======
+>>>>>>> 7854d77 (Audit log)
 - JWT
 
 ## Tác giả
 
+<<<<<<< HEAD
 - [Tên bạn]
 - [Lớp]
 - [Trường]
+=======
+>>>>>>> 7854d77 (Audit log)

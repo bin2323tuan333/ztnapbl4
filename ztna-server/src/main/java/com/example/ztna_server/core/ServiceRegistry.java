@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -17,7 +18,6 @@ public class ServiceRegistry {
             if (old != null && old != session) {
                 log.warn("Service '{}' overridden: {} -> {}", svc, old.getId(), session.getId());
             }
-
         }
         log.info("Registered connector {} with services {}", session.getId(), session.getServices());
     }
@@ -29,6 +29,9 @@ public class ServiceRegistry {
         log.info("Unregistered connector {}", session.getId());
     }
 
+    public Optional<ConnectorSession> findConnectorByService(String service) {
+        return Optional.ofNullable(connectors.get(service));
+    }
 
     public ConnectorSession get(String service) {
         return connectors.get(service);
