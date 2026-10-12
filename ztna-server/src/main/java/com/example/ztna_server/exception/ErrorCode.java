@@ -22,7 +22,14 @@ public enum ErrorCode {
     USER_EXISTED(1200, "Tên đăng nhập đã tồn tại", HttpStatus.BAD_REQUEST),
     EMAIL_EXISTED(1201, "Email đã được sử dụng", HttpStatus.BAD_REQUEST),
     USER_NOT_EXISTED(1202, "Người dùng không tồn tại", HttpStatus.NOT_FOUND),
-    OLD_PASSWORD_INCORRECT(1203, "Mật khẩu cũ không đúng", HttpStatus.BAD_REQUEST);
+    OLD_PASSWORD_INCORRECT(1203, "Mật khẩu cũ không đúng", HttpStatus.BAD_REQUEST),
+
+     // ===== System Role =====
+    SYSTEM_ROLE_NOT_EXISTED(1300,"Vai trò hệ thống không tồn tại",HttpStatus.NOT_FOUND),
+    SYSTEM_ROLE_EXISTED(1301,"Tên vai trò hệ thống đã tồn tại",HttpStatus.CONFLICT),
+    SYSTEM_ROLE_IN_USE(1302,"Không thể xóa vai trò đang được sử dụng",HttpStatus.CONFLICT),
+    SYSTEM_ROLE_ASSIGNMENT_INVALID(1303,"Không thể gán vai trò hệ thống",HttpStatus.BAD_REQUEST);
+
 
     private final int code;
     private final String message;

@@ -38,4 +38,8 @@ public class User {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "system_role_id")
+    private SystemRole systemRole;
 }

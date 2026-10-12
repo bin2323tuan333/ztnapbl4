@@ -2,6 +2,7 @@ package com.example.ztna_server.service;
 
 import com.example.ztna_server.api.dto.ChangePasswordRequest;
 import com.example.ztna_server.api.dto.UserResponse;
+import com.example.ztna_server.entity.SystemRole;
 import com.example.ztna_server.entity.User;
 import com.example.ztna_server.entity.enums.AuditAction;
 import com.example.ztna_server.exception.AppException;
@@ -23,24 +24,29 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
 
+    @Transactional(readOnly = true)
     public Optional<User> findByUsername(String username) {
         return userRepository.findByUsername(username);
     }
 
+    @Transactional(readOnly = true)
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
 
+    @Transactional(readOnly = true)
     public Optional<User> findById(Long id) {
         return userRepository.findById(id);
     }
 
+    @Transactional(readOnly = true)
     public UserResponse getByUsername(String username) {
         User user = findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         return toResponse(user);
     }
 
+    @Transactional(readOnly = true)
     public UserResponse getById(Long id) {
         User user = findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
@@ -48,7 +54,7 @@ public class UserService {
     }
 
     @Transactional
-    public User createUser(String username, String rawPassword, String email) {
+    public User createUser(String username, String rawPassword, String email, SystemRole systemRole) {
         if (userRepository.findByUsername(username).isPresent()) {
             throw new AppException(ErrorCode.USER_EXISTED);
         }
@@ -62,11 +68,16 @@ public class UserService {
                 .passwordHash(passwordEncoder.encode(rawPassword))
                 .email(email)
                 .enabled(true)
+                .systemRole(systemRole)       
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
 
         User saved = userRepository.save(user);
+
+        String roleInfo = systemRole != null
+                ? " với role " + systemRole.getName()
+                : " (không có role)";
 
         auditLogService.log(
                 saved.getId(),
@@ -74,7 +85,7 @@ public class UserService {
                 AuditAction.CREATE_USER,
                 "USER",
                 saved.getId(),
-                "Tạo người dùng"
+                "Tạo người dùng" + roleInfo
         );
 
         return saved;
@@ -110,6 +121,7 @@ public class UserService {
         );
     }
 
+
     @Transactional
     public UserResponse setEnabled(Long id, boolean enabled) {
         User user = findById(id)
@@ -131,7 +143,10 @@ public class UserService {
         return toResponse(saved);
     }
 
+
     private UserResponse toResponse(User user) {
+        SystemRole role = user.getSystemRole();
+
         return UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -139,6 +154,9 @@ public class UserService {
                 .enabled(user.getEnabled())
                 .lastLoginAt(user.getLastLoginAt())
                 .createdAt(user.getCreatedAt())
+                .systemRoleId(role != null ? role.getId() : null)
+                .systemRoleName(role != null ? role.getName() : null)
+                .systemRoleDisplayName(role != null ? role.getDisplayName() : null)
                 .build();
     }
 }

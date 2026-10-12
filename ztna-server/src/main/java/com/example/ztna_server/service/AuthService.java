@@ -3,10 +3,13 @@ package com.example.ztna_server.service;
 import com.example.ztna_server.api.dto.LoginRequest;
 import com.example.ztna_server.api.dto.LoginResponse;
 import com.example.ztna_server.api.dto.RegisterRequest;
+import com.example.ztna_server.entity.SystemRole;
 import com.example.ztna_server.entity.User;
 import com.example.ztna_server.entity.enums.AuditAction;
+import com.example.ztna_server.entity.enums.SystemRoleName;
 import com.example.ztna_server.exception.AppException;
 import com.example.ztna_server.exception.ErrorCode;
+import com.example.ztna_server.repo.SystemRoleRepository;
 import com.example.ztna_server.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,6 +27,7 @@ public class AuthService {
     private final UserService userService;
     private final JwtService jwtService;
     private final AuditLogService auditLogService;
+    private final SystemRoleRepository systemRoleRepository;   // ← thêm
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
@@ -93,10 +97,15 @@ public class AuthService {
 
     @Transactional
     public LoginResponse register(RegisterRequest request) {
+        SystemRole defaultRole = systemRoleRepository
+                .findByName(SystemRoleName.USER)
+                .orElseThrow(() -> new AppException(ErrorCode.SYSTEM_ROLE_NOT_EXISTED));
+
         User user = userService.createUser(
                 request.getUsername(),
                 request.getPassword(),
-                request.getEmail()
+                request.getEmail(),
+                defaultRole
         );
 
         String token = jwtService.generateAccessToken(user);
@@ -107,7 +116,7 @@ public class AuthService {
                 AuditAction.REGISTER,
                 "USER",
                 user.getId(),
-                "Đăng ký tài khoản mới"
+                "Đăng ký tài khoản mới với role USER"
         );
 
         return LoginResponse.builder()

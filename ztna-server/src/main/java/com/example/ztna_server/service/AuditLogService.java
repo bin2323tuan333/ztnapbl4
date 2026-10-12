@@ -84,6 +84,10 @@ public class AuditLogService {
             case CHANGE_PASSWORD -> "Đổi mật khẩu";
             case ENABLE_USER -> "Mở khóa tài khoản";
             case DISABLE_USER -> "Khóa tài khoản";
+            case CREATE_SYSTEM_ROLE -> "Tạo vai trò hệ thống";
+            case UPDATE_SYSTEM_ROLE -> "Cập nhật vai trò hệ thống";
+            case DELETE_SYSTEM_ROLE -> "Xóa vai trò hệ thống";
+            case ASSIGN_SYSTEM_ROLE -> "Gán vai trò cho người dùng";
         };
     }
 
