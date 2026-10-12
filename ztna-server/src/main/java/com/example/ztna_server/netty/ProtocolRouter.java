@@ -1,6 +1,5 @@
 package com.example.ztna_server.netty;
 
-import com.example.ztna_server.config.ZtnaProperties;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -15,12 +14,12 @@ import org.springframework.stereotype.Component;
 @Component
 @ChannelHandler.Sharable
 public class ProtocolRouter extends ChannelInboundHandlerAdapter {
-    private final UserWsHandler userWsHandler;
+    private final AppWsHandler appWsHandler;
     private final RestApiHandler restApiHandler;
     private final StaticFileHandler staticFileHandler;
 
-    public ProtocolRouter(UserWsHandler userWsHandler, RestApiHandler restApiHandler, StaticFileHandler staticFileHandler) {
-        this.userWsHandler = userWsHandler;
+    public ProtocolRouter(AppWsHandler appWsHandler, RestApiHandler restApiHandler, StaticFileHandler staticFileHandler) {
+        this.appWsHandler = appWsHandler;
         this.restApiHandler = restApiHandler;
         this.staticFileHandler = staticFileHandler;
     }
@@ -52,7 +51,7 @@ public class ProtocolRouter extends ChannelInboundHandlerAdapter {
                             true
                     )
             );
-            ctx.pipeline().addLast(userWsHandler);
+            ctx.pipeline().addLast(appWsHandler);
             ctx.fireChannelRead(req);
             return;
         }

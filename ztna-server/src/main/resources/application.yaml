@@ -19,7 +19,16 @@
 #    ttl-minutes: ${JWT_TTL_MINUTES:60}
 #  connector:
 #    token: ${CONNECTOR_TOKEN}
+#server:
+#  port: 443
+#  ssl:
+#    enabled: true
+#    key-store: classpath:keystore.p12
+#    key-store-password: changeit
+#    key-store-type: PKCS12
 
+server:
+  port: 8080
 spring:
   application:
     name: ztna-server
@@ -37,7 +46,6 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
         jdbc:
           time_zone: Asia/Ho_Chi_Minh

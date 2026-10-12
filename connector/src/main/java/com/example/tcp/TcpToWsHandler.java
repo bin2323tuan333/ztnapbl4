@@ -1,68 +1,60 @@
 package com.example.tcp;
 
+import com.example.protocol.frames.DataFrame;
+import com.example.routes.TcpManager;
+import com.example.ws.ConnectorClient;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.function.Consumer;
 
 @Slf4j
-public class TcpToWsHandler extends ChannelInboundHandlerAdapter {
-
+public class TcpToWsHandler extends SimpleChannelInboundHandler<ByteBuf> {
     private final int streamId;
-    private final Channel wsChannel;
-    private final Consumer<Integer> onClose;
+    private final Consumer<byte[]> frameSender;
 
-    public TcpToWsHandler(int streamId, Channel wsChannel, Consumer<Integer> onClose) {
+    public TcpToWsHandler(int streamId, Consumer<byte[]> frameSender) {
         this.streamId = streamId;
-        this.wsChannel = wsChannel;
-        this.onClose = onClose;
+        this.frameSender = frameSender;
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (!(msg instanceof ByteBuf data)) return;
-
-        int len = data.readableBytes();
-
-        ByteBuf frame = ctx.alloc().buffer(1 + 4 + 4 + len);
-        frame.writeByte(0x02);
-        frame.writeInt(streamId);
-        frame.writeInt(len);
-        frame.writeBytes(data);
-
-        if (wsChannel.isActive()) {
-            wsChannel.writeAndFlush(new BinaryWebSocketFrame(frame));
-            log.debug("App → Server: {}B, stream={}", len, streamId);
-        }
-
-        data.release();
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        TcpManager tcpManager = TcpManager.getInstance();
+        tcpManager.add(streamId, ctx.channel());
+        log.info("[stream={}] TCP active", streamId);
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) {
-        log.info("TCP closed: stream={}", streamId);
+    protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        if (!msg.isReadable()) return;
 
-        if (wsChannel.isActive()) {
-            ByteBuf close = ctx.alloc().buffer(6);
-            close.writeByte(0x03);
-            close.writeInt(streamId);
-            close.writeByte(0);
+        byte[] payload = new byte[msg.readableBytes()];
+        msg.readBytes(payload);
 
-            wsChannel.writeAndFlush(new BinaryWebSocketFrame(close));
-        }
+        DataFrame dataFrame = new DataFrame(streamId, payload);
 
-        if (onClose != null) {
-            onClose.accept(streamId);
-        }
+        frameSender.accept(dataFrame.encode());
+
+        log.debug("[stream={}] App → WS: {} bytes", streamId, payload.length);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        TcpManager tcpManager = TcpManager.getInstance();
+        tcpManager.remove(streamId);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("TCP error: stream={}", streamId, cause);
+        log.error("[stream={}] Lỗi TCP", streamId, cause);
+        TcpManager.getInstance().remove(streamId);
         ctx.close();
     }
 }

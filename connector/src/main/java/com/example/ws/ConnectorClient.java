@@ -10,9 +10,13 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.timeout.IdleStateHandler;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.net.ssl.SSLException;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,27 +37,20 @@ public class ConnectorClient {
     private final EventLoopGroup group = new NioEventLoopGroup();
     private final AtomicBoolean stopped = new AtomicBoolean(false);
     private volatile Channel currentChannel;
+    private final SslContext sslContext;
 
-    public ConnectorClient(ConnectorConfig config,
-                           Supplier<ConnectorHandler> handlerFactory) {
+    public ConnectorClient(ConnectorConfig config, Supplier<ConnectorHandler> handlerFactory) {
         this.config = config;
         this.handlerFactory = handlerFactory;
+
+        try {
+            this.sslContext = SslContextBuilder.forClient().build();
+        } catch (SSLException e) {
+            throw new IllegalStateException("Failed to init SSL context", e);
+        }
     }
 
     public void start() {
-        // ① Check TCP tới từng service TRƯỚC
-        Map<String, String> availableServices = checkServices();
-
-        if (availableServices.isEmpty()) {
-            log.error("No available services! Check your apps are running.");
-        } else {
-            log.info("Available services: {}", availableServices.keySet());
-
-            // ② Update config với services OK
-            config.getServices().clear();
-            config.getServices().putAll(availableServices);
-        }
-
         while (!stopped.get()) {
             try {
                 connectOnce();
@@ -76,49 +73,14 @@ public class ConnectorClient {
 
         log.info("Connector stopped");
     }
-    private Map<String, String> checkServices() {
-        log.info("Checking services...");
-        Map<String, String> ok = new HashMap<>();
 
-        for (Map.Entry<String, String> entry : config.getServices().entrySet()) {
-            String name = entry.getKey();
-            String target = entry.getValue();
 
-            String host = target.split(":")[0];
-            int port = Integer.parseInt(target.split(":")[1]);
-
-            boolean reachable = checkTcp(name, host, port);
-
-            if (reachable) {
-                ok.put(name, target);
-                log.info("  ✅ {} → {}:{} — OK", name, host, port);
-            } else {
-                log.warn("  ❌ {} → {}:{} — FAIL", name, host, port);
-            }
-        }
-
-        return ok;
-    }
-
-    private boolean checkTcp(String name, String host, int port) {
-        try (java.net.Socket socket = new java.net.Socket()) {
-            socket.connect(
-                    new java.net.InetSocketAddress(host, port),
-                    TCP_CHECK_TIMEOUT_MS
-            );
-            return true;
-        } catch (Exception e) {
-            log.warn("  ❌ {} → {}:{} — {}", name, host, port, e.getMessage());
-            return false;
-        }
-    }
 
     private void connectOnce() throws Exception {
         URI uri = URI.create(config.getServerUrl());
+        boolean useTls = "wss".equalsIgnoreCase(uri.getScheme());
         String host = uri.getHost();
         int port = resolvePort(uri);
-
-        log.info("Connecting to {}:{}...", host, port);
 
         Bootstrap b = new Bootstrap();
         b.group(group)
@@ -131,20 +93,36 @@ public class ConnectorClient {
                     protected void initChannel(SocketChannel ch) {
                         ChannelPipeline p = ch.pipeline();
 
+                        if (useTls) {
+                            p.addLast(sslContext.newHandler(ch.alloc(), uri.getHost(), resolvePort(uri)));
+                        }
+
                         p.addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS));
                         p.addLast(new HttpClientCodec());
                         p.addLast(new HttpObjectAggregator(65536));
 
                         DefaultHttpHeaders headers = new DefaultHttpHeaders();
-                        headers.add("Authorization", "Bearer " + config.getToken());
+                        headers.add(
+                                "Authorization",
+                                "Bearer " + config.getToken()
+                        );
 
-                        p.addLast(new WebSocketClientProtocolHandler(
-                                uri, WebSocketVersion.V13, null, false,
-                                headers, MAX_FRAME_SIZE));
+                        p.addLast(
+                                new WebSocketClientProtocolHandler(
+                                        uri,
+                                        WebSocketVersion.V13,
+                                        null,
+                                        false,
+                                        headers,
+                                        MAX_FRAME_SIZE
+                                )
+                        );
 
                         p.addLast(handlerFactory.get());
                     }
                 });
+
+
 
         Channel channel = b.connect(host, port).sync().channel();
         currentChannel = channel;

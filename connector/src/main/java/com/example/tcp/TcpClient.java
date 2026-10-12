@@ -1,27 +1,27 @@
 package com.example.tcp;
 
+import com.example.routes.TcpManager;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.function.Consumer;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Slf4j
 public class TcpClient {
+    private final EventLoopGroup group = new NioEventLoopGroup();
 
-    private final TcpSessionManager sessionManager;
-
-    public TcpClient(TcpSessionManager sessionManager) {
-        this.sessionManager = sessionManager;
-    }
-
-    public void connect(int streamId, String service, String host, int port, Channel wsChannel) {
+    public void connect(int streamId, String host, int port, Channel wsChannel) {
         Bootstrap b = new Bootstrap();
-        b.group(wsChannel.eventLoop())
+        b.group(group)
                 .channel(NioSocketChannel.class)
                 .option(ChannelOption.TCP_NODELAY, true)
                 .option(ChannelOption.SO_KEEPALIVE, true)
@@ -29,50 +29,64 @@ public class TcpClient {
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) {
-                        ch.pipeline().addLast(
-                                new TcpToWsHandler(
-                                        streamId,
-                                        wsChannel,
-                                        id -> sessionManager.remove(id)
-                                )
-                        );
+                        Consumer<byte[]> sender = encoded -> {
+                            if (wsChannel.isActive()) {
+                                wsChannel.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(encoded)) );
+                            } else {
+                                log.warn("[stream={}] WS channel không active", streamId);
+                            }
+                        };
+                        ch.pipeline().addLast(new TcpToWsHandler(streamId, sender));
                     }
                 });
 
-        b.connect(host, port).addListener((ChannelFuture f) -> {
+        b.connect(host, port).addListener((ChannelFutureListener) f -> {
             if (f.isSuccess()) {
-                Channel tcpChannel = f.channel();
-                TcpSession session = new TcpSession(streamId, service, tcpChannel, wsChannel);
-                sessionManager.put(streamId, session);
-
                 log.info("TCP connected: stream={}, {}:{}", streamId, host, port);
-                sendConnectAck(wsChannel, streamId, (byte) 0x00, null);
             } else {
-                log.error("TCP failed: stream={}, {}:{}, err={}",
-                        streamId, host, port, f.cause().getMessage());
-                sendConnectAck(wsChannel, streamId, (byte) 0x03,
-                        f.cause().getMessage());
+                log.error("TCP failed: stream={}, {}:{}, err={}", streamId, host, port, f.cause().getMessage());
             }
         });
     }
 
     public void close(int streamId) {
-        TcpSession session = sessionManager.remove(streamId);
-        if (session != null && session.getTcpChannel().isActive()) {
-            session.getTcpChannel().close();
+        TcpManager tcpManager = TcpManager.getInstance();
+        Channel channel = tcpManager.getChannel(streamId);
+        tcpManager.remove(streamId);
+        if (channel != null && channel.isActive()) {
+            channel.close();
+            log.info("[TcpClient] Đã đóng stream={}", streamId);
+        } else {
+            log.debug("[TcpClient] Stream {} đã đóng trước đó", streamId);
         }
     }
 
-    private void sendConnectAck(Channel wsChannel, int streamId, byte status, String reason) {
-        byte[] reasonBytes = reason == null ? new byte[0] : reason.getBytes(UTF_8);
+    public void sendData(int streamId, byte[] payload) {
+        if (payload == null || payload.length == 0) {
+            return;
+        }
 
-        ByteBuf buf = wsChannel.alloc().buffer(1 + 4 + 1 + 2 + reasonBytes.length);
-        buf.writeByte(0x04);
-        buf.writeInt(streamId);
-        buf.writeByte(status);
-        buf.writeShort(reasonBytes.length);
-        buf.writeBytes(reasonBytes);
+        Channel tcpChannel = TcpManager.getInstance().getChannel(streamId);
+        if (tcpChannel == null) {
+            log.warn("[TcpClient] Stream không tồn tại: {}", streamId);
+            return;
+        }
 
-        wsChannel.writeAndFlush(new BinaryWebSocketFrame(buf));
+        if (!tcpChannel.isActive()) {
+            log.warn("[TcpClient] TCP channel không active: stream={}", streamId);
+            TcpManager.getInstance().remove(streamId);
+            return;
+        }
+
+
+        ByteBuf buf = Unpooled.wrappedBuffer(payload);
+        tcpChannel.writeAndFlush(buf).addListener(f -> {
+            if (!f.isSuccess()) {
+                log.error("[TcpClient] Ghi vào App fail stream={}", streamId, f.cause());
+                close(streamId);
+            }
+        });
+
+        log.debug("[TcpClient] Server → App: stream={}, {} bytes", streamId, payload.length);
     }
 }
