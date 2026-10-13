@@ -1,0 +1,201 @@
+/* ============================================================
+   SIDEBAR WRAPPER
+   ============================================================ */
+
+.sb-sidebar {
+    position: relative;
+    overflow: visible;
+    width: 240px;
+    height: 100%;
+    background: #f3f4f6;
+    border-right: 1px solid var(--color-border, #e5e7eb);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    transition: width var(--transition-base, 0.2s ease);
+}
+
+.sb-sidebar.sb-collapsed {
+    width: 64px;
+}
+
+/* ---------- Vùng body — co giãn, KHÔNG scroll ---------- */
+.sb-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------- Nav — cuộn dọc ở đây ---------- */
+.sb-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px 0;
+}
+
+/* Scrollbar mảnh */
+.sb-nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sb-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sb-nav::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 999px;
+}
+
+.sb-nav::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* ============================================================
+   NÚT TOGGLE
+   ============================================================ */
+
+.sb-toggle {
+    position: absolute;
+    top: 16px;
+    right: -14px;
+
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    cursor: pointer;
+    z-index: 100;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    transition: background 0.15s ease,
+                color 0.15s ease,
+                border-color 0.15s ease;
+}
+
+.sb-toggle:hover {
+    background: #f3e8ff;
+    color: #9333ea;
+    border-color: #e9d5ff;
+}
+
+/* ============================================================
+   ITEM CẤP 1
+   ============================================================ */
+
+.sb-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 38px;
+    padding: 0 16px;
+    margin: 2px 8px;
+    border-radius: 8px;
+    color: #6b7280;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    user-select: none;
+}
+
+.sb-item:hover {
+    background: #ffffff;
+    color: #111827;
+}
+
+.sb-item-active {
+    background: #f3e8ff;
+    color: #9333ea;
+    font-weight: 500;
+}
+
+.sb-item-active .sb-item-icon {
+    color: #9333ea;
+}
+
+.sb-item-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: #9ca3af;
+}
+
+.sb-item-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sb-item-chevron {
+    color: #9ca3af;
+    transition: transform 0.15s ease;
+}
+
+.sb-item-chevron-open {
+    transform: rotate(180deg);
+}
+
+/* ============================================================
+   DROPDOWN CẤP 2 — grid trick
+   ============================================================ */
+
+.sb-submenu {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease;
+}
+
+.sb-submenu-open {
+    grid-template-rows: 1fr;
+}
+
+/* Wrapper bên trong — BẮT BUỘC cho grid trick hoạt động */
+.sb-submenu-inner {
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* ---------- Item cấp 2 ---------- */
+.sb-submenu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 16px 0 52px;
+    color: #6b7280;
+    font-size: 13px;
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
+    border-radius: 8px;
+    margin: 1px 8px;
+}
+
+.sb-submenu-item:hover {
+    color: #111827;
+    background: #ffffff;
+}
+
+.sb-submenu-item-active {
+    color: #9333ea;
+    background: #f3e8ff;
+    font-weight: 500;
+}
+
+.sb-submenu-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.5;
+    flex-shrink: 0;
+}

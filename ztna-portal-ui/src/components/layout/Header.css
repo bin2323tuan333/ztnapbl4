@@ -1,0 +1,120 @@
+.hd-header {
+    height: 64px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.hd-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.hd-logo-icon {
+    width: 36px;
+    height: 36px;
+    background: #9333ea;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+}
+
+.hd-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.hd-right {
+    position: relative;
+}
+
+.hd-user {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: background 0.15s;
+}
+
+.hd-user:hover {
+    background: #f3f4f6;
+}
+
+.hd-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f3e8ff;
+    color: #9333ea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.hd-username {
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.hd-chevron {
+    color: #6b7280;
+    transition: transform 0.2s;
+}
+
+.hd-chevron-open {
+    transform: rotate(180deg);
+}
+
+.hd-dropdown {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    min-width: 160px;
+    padding: 4px;
+    z-index: 100;
+}
+
+.hd-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #374151;
+    transition: background 0.15s;
+}
+
+.hd-dropdown-item:hover {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+@media (max-width: 768px) {
+    .hd-username {
+        display: none;
+    }
+}
