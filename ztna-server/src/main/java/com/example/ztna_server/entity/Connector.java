@@ -23,14 +23,17 @@ public class Connector {
     private String name;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean enabled = true;
 
-    @Column(name = "connection_string_or_config", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "connection_string_or_config", nullable = false, columnDefinition = "TEXT")
     private String connectionStringOrConfig;
 
     @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
     private Instant createdAt = Instant.now();
 
     @Column(name = "updated_at", nullable = false)
+    @Builder.Default
     private Instant updatedAt = Instant.now();
 }

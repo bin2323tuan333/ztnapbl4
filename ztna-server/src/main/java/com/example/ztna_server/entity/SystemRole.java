@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 
 @Entity
@@ -16,7 +17,7 @@ import java.time.Instant;
 public class SystemRole {
     @Id
     @GeneratedValue
-    private Integer id;
+    private UUID id;
 
     @Column(length = 30, nullable = false, unique = true)
     private String name;

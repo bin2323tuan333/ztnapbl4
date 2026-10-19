@@ -34,7 +34,6 @@ public class ZTNAServerBootstrap {
     private static final int APP_PORT = 9443;
     private static final int MAX_FRAME_SIZE = 1024 * 1024;
 
-    // ⭐ Connector ID hard-code
     private static final String DEMO_CONNECTOR_ID = "conn_01";
 
     private final ObjectProvider<ConnectorWsHandler> connectorProvider;
@@ -104,7 +103,7 @@ public class ZTNAServerBootstrap {
                     @Override
                     protected void initChannel(SocketChannel ch) {
                         ch.pipeline()
-//                                .addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS))
+                                .addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS))
                                 .addLast(new HttpServerCodec())
                                 .addLast(new HttpObjectAggregator(65536))
                                 .addLast(new io.netty.channel.ChannelInboundHandlerAdapter() {
@@ -139,7 +138,7 @@ public class ZTNAServerBootstrap {
                     @Override
                     protected void initChannel(SocketChannel ch) {
                         ch.pipeline()
-//                                .addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS))
+                                .addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS))
                                 .addLast(new HttpServerCodec())
                                 .addLast(new HttpObjectAggregator(65536))
 

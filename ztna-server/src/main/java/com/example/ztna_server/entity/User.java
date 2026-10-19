@@ -41,4 +41,8 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     @Builder.Default
     private Instant updatedAt = Instant.now();
+
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_role_id", nullable = false)
+    private UserRole role;
 }

@@ -1,14 +1,16 @@
 package com.example.ztna_server.service;
 
 import com.example.ztna_server.entity.User;
-import com.example.ztna_server.repo.UserRepository;
+import com.example.ztna_server.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +27,7 @@ public class UserService {
         return userRepository.findByEmail(email);
     }
 
-    public Optional<User> findById(Long id) {
+    public Optional<User> findById(UUID id) {
         return userRepository.findById(id);
     }
 
@@ -43,8 +45,8 @@ public class UserService {
                 .password(passwordEncoder.encode(rawPassword))
                 .email(email)
                 .enabled(true)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
 
         return userRepository.save(user);
@@ -52,22 +54,22 @@ public class UserService {
 
     @Transactional
     public void updateLastLogin(User user) {
-        user.setLastLoginAt(LocalDateTime.now());
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setLastLoginAt(Instant.now());
+        user.setUpdatedAt(Instant.now());
         userRepository.save(user);
     }
 
     @Transactional
     public User updatePassword(User user, String newRawPassword) {
         user.setPassword(passwordEncoder.encode(newRawPassword));
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setUpdatedAt(Instant.now());
         return userRepository.save(user);
     }
 
     @Transactional
     public User setEnabled(User user, boolean enabled) {
         user.setEnabled(enabled);
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setUpdatedAt(Instant.now());
         return userRepository.save(user);
     }
 }

@@ -40,7 +40,7 @@ public class AuthService {
         String token = jwtService.generateToken(
                 user.getId(),
                 user.getUsername(),
-                user.getRole()
+                user.getRole().getRole().getName()
         );
 
         LoginResponse response = LoginResponse.builder()

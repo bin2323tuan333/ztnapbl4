@@ -3,12 +3,18 @@ package com.example.ztna_server.entity;
 
 import com.example.ztna_server.enums.Decision;
 import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(name = "access_logs")
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class AccessLog {
     @Id
     @GeneratedValue
@@ -46,5 +52,6 @@ public class AccessLog {
     private String reason;
 
     @Column(name = "created_at", nullable = false)
+    @Builder.Default
     private Instant createdAt = Instant.now();
 }

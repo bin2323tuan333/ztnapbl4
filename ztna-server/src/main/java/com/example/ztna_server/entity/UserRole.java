@@ -19,6 +19,7 @@ public class UserRole {
     private UUID id;
 
     @Column(name = "granted_at", nullable = false)
+    @Builder.Default
     private Instant grantedAt = Instant.now();
 
     @Column(name = "expires_at")
@@ -28,9 +29,11 @@ public class UserRole {
     private String reason;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean enabled = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
     private Instant createdAt = Instant.now();
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
