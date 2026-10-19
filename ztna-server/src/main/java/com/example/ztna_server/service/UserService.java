@@ -40,7 +40,7 @@ public class UserService {
 
         User user = User.builder()
                 .username(username)
-                .passwordHash(passwordEncoder.encode(rawPassword))
+                .password(passwordEncoder.encode(rawPassword))
                 .email(email)
                 .enabled(true)
                 .createdAt(LocalDateTime.now())
@@ -59,7 +59,7 @@ public class UserService {
 
     @Transactional
     public User updatePassword(User user, String newRawPassword) {
-        user.setPasswordHash(passwordEncoder.encode(newRawPassword));
+        user.setPassword(passwordEncoder.encode(newRawPassword));
         user.setUpdatedAt(LocalDateTime.now());
         return userRepository.save(user);
     }

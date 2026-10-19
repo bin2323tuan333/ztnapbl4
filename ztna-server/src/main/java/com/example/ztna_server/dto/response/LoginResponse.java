@@ -1,4 +1,4 @@
-package com.example.ztna_server.api.dto;
+package com.example.ztna_server.dto.response;
 
 import lombok.*;
 
@@ -8,10 +8,5 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class LoginResponse {
-
     private String token;
-
-    private Long userId;
-
-    private String username;
 }

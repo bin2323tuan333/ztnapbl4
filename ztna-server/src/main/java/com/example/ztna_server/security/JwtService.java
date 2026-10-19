@@ -13,61 +13,51 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    private final SecretKey key;
-    private final long accessTokenExpirationMs;
-    private final long refreshTokenExpirationMs;
+    @Value("${app.jwt.secret}")
+    private String secret;
 
-    public JwtService(
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.access-token-expiration-ms:900000}") long accessTokenExpirationMs,
-            @Value("${jwt.refresh-token-expiration-ms:604800000}") long refreshTokenExpirationMs
-    ) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.accessTokenExpirationMs = accessTokenExpirationMs;
-        this.refreshTokenExpirationMs = refreshTokenExpirationMs;
+    @Value("${app.jwt.expiration-ms}")
+    private long expirationMs;
+
+
+    private SecretKey key() {
+        return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    public String generateAccessToken(User user) {
+    public String generateToken(Long userId, String username, String role) {
         return Jwts.builder()
-                .subject(user.getUsername())
-                .claim("uid", user.getId())
-                .claim("type", "access")
+                .subject(username)
+                .claim("userId", userId)
+                .claim("role", role)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + accessTokenExpirationMs))
-                .signWith(key)
+                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(key())
                 .compact();
     }
 
-    public String generateRefreshToken(User user) {
-        return Jwts.builder()
-                .subject(user.getUsername())
-                .claim("uid", user.getId())
-                .claim("type", "refresh")
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + refreshTokenExpirationMs))
-                .signWith(key)
-                .compact();
+    public Claims parse(String token) {
+        return Jwts.parser()
+                .verifyWith(key())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
-    public boolean validateRefreshToken(String token) {
+
+    public boolean isValid(String token) {
         try {
-            Claims claims = parseClaims(token);
-            return "refresh".equals(claims.get("type", String.class));
+            parse(token);
+            return true;
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
     }
 
-    public String extractUsername(String token) {
-        return parseClaims(token).getSubject();
-    }
 
-    private Claims parseClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-    }
+    public String getUsername(String token) { return parse(token).getSubject(); }
+    public Long getUserId(String token)      { return parse(token).get("userId", Long.class); }
+    public String getRole(String token)      { return parse(token).get("role", String.class); }
+
+
 
 }

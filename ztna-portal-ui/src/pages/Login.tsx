@@ -1,38 +1,50 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, User, Lock, LogIn } from 'lucide-react';
+import { getCurrentUser } from '../utils/auth';
 import './Login.css';
 
-const Login: React.FC = () => {
+const Login = () => {
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        setLoading(true);
 
-        setTimeout(() => {
-            if (username === 'admin' && password === '123') {
-                localStorage.setItem('token', 'admin-token-xyz');
-                localStorage.setItem('username', 'admin');
-                localStorage.setItem('role', 'ADMIN');
-                localStorage.setItem('allowedApps', JSON.stringify(['*']));
-                navigate('/app/home');
-            } else if (username === 'user' && password === '123') {
-                localStorage.setItem('token', 'user-token-xyz');
-                localStorage.setItem('username', 'user');
-                localStorage.setItem('role', 'USER');
-                localStorage.setItem('allowedApps', JSON.stringify(['portal']));
-                navigate('/portal');
-            } else {
-                setError('Tên đăng nhập hoặc mật khẩu không đúng');
+        if (!username || !password) {
+            setError("Kiểm tra lại tên đăng nhập và mật khẩu");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await fetch('http://localhost:443/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setError(data.message || "Đăng nhập thất bại");
+                return;
             }
+
+            localStorage.setItem('token', data.token);
+
+            const me = getCurrentUser();
+            navigate(me?.role === 'ADMIN' ? '/app/home' : '/portal');
+        } catch (err) {
+            console.error(err);
+            setError("Không kết nối được server");
+        } finally {
             setLoading(false);
-        }, 500);
+        }
     };
 
     return (
@@ -56,7 +68,6 @@ const Login: React.FC = () => {
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 className="login-input"
-                                required
                             />
                         </div>
                     </div>
@@ -70,7 +81,6 @@ const Login: React.FC = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="login-input"
-                                required
                             />
                         </div>
                     </div>
@@ -80,10 +90,6 @@ const Login: React.FC = () => {
                         <span>{loading ? 'Đang đăng nhập...' : 'Đăng nhập'}</span>
                     </button>
                 </form>
-
-                <p className="login-hint">
-                    Demo: <strong>admin</strong> / <strong>123</strong> hoặc <strong>user</strong> / <strong>123</strong>
-                </p>
             </div>
         </div>
     );

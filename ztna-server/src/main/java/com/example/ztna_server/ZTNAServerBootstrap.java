@@ -111,13 +111,6 @@ public class ZTNAServerBootstrap {
                                     @Override
                                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                         log.info("[PIPE] Nhận: {}", msg.getClass().getSimpleName());
-                                        if (msg instanceof io.netty.handler.codec.http.HttpRequest req) {
-                                            log.info("[PIPE] URI: {}", req.uri());
-                                            log.info("[PIPE] Method: {}", req.method());
-                                            log.info("[PIPE] Upgrade: {}", req.headers().get("Upgrade"));
-                                            log.info("[PIPE] Connection: {}", req.headers().get("Connection"));
-                                            log.info("[PIPE] Sec-WebSocket-Key: {}", req.headers().get("Sec-WebSocket-Key"));
-                                        }
                                         ctx.fireChannelRead(msg);
                                     }
                                 })
