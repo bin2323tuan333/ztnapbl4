@@ -28,13 +28,13 @@
 #    key-store-type: PKCS12
 
 server:
-  port: 8080
+  port: 443
 spring:
   application:
     name: ztna-server
 
   datasource:
-    url: jdbc:mysql://localhost:3306/ztna_db?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
+    url: jdbc:mysql://localhost:3306/ztna_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver

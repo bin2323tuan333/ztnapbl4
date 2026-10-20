@@ -6,7 +6,7 @@ import com.example.ztna_server.protocol.frames.CloseFrame;
 import com.example.ztna_server.protocol.frames.OpenReqFrame;
 import com.example.ztna_server.protocol.frames.OpenResFrame;
 import com.example.ztna_server.routes.Session;
-import com.example.ztna_server.security.JwtService;
+import com.example.ztna_server.service.JwtService;
 import com.example.ztna_server.service.SessionLifecycleService;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;

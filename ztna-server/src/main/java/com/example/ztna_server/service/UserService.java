@@ -1,75 +1,147 @@
 package com.example.ztna_server.service;
 
+import com.example.ztna_server.dto.internal.UserInfo;
+import com.example.ztna_server.dto.request.CreateUserRequest;
+import com.example.ztna_server.dto.request.UpdatePasswordRequest;
+import com.example.ztna_server.dto.response.UserResponse;
 import com.example.ztna_server.entity.User;
+import com.example.ztna_server.enums.ErrorCode;
+import com.example.ztna_server.exception.AppException;
+import com.example.ztna_server.mapper.UserMapper;
 import com.example.ztna_server.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
-    public Optional<User> findByUsername(String username) {
-        return userRepository.findByUsername(username);
+    public UserInfo getUserByUsername(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> {
+                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+                });
+
+        return userMapper.toUserInfo(user);
     }
 
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
+    public UserInfo getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+                });
+
+        return userMapper.toUserInfo(user);
     }
 
-    public Optional<User> findById(UUID id) {
-        return userRepository.findById(id);
+    public UserInfo getUserById(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> {
+                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+                });
+
+        return userMapper.toUserInfo(user);
     }
 
-    @Transactional
-    public User createUser(String username, String rawPassword, String email) {
-        if (userRepository.findByUsername(username).isPresent()) {
-            throw new IllegalArgumentException("Username already exists");
+
+    public UserResponse createUser(CreateUserRequest request) {
+        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new AppException(ErrorCode.USERNAME_EXISTED);
         }
-        if (email != null && userRepository.findByEmail(email).isPresent()) {
-            throw new IllegalArgumentException("Email already exists");
+
+        if (request.getEmail() != null && userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
         }
 
         User user = User.builder()
-                .username(username)
-                .password(passwordEncoder.encode(rawPassword))
-                .email(email)
+                .username(request.getUsername())
+                .fullName(request.getFullName())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .email(request.getEmail())
                 .enabled(true)
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
                 .build();
-
-        return userRepository.save(user);
+        User saveUser = userRepository.save(user);
+        return userMapper.toUserResponse(saveUser);
     }
 
-    @Transactional
-    public void updateLastLogin(User user) {
-        user.setLastLoginAt(Instant.now());
+    public List<UserResponse> getUsers() {
+        List<User> users = userRepository.findAll();
+
+        return users.stream()
+                .map(userMapper::toUserResponse)
+                .toList();
+    }
+
+    public UserResponse getUserByID(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> {
+                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+                });
+
+        return userMapper.toUserResponse(user);
+    }
+
+    public void deleteUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> {
+                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+                });
+        userRepository.delete(user);
+    }
+
+    public void blockUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> {
+                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+                });
+
+        if (user.getEnabled()) {
+            user.setEnabled(false);
+            userRepository.save(user);
+        }
+    }
+
+    public void unblockUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> {
+                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+                });
+
+        if (!user.getEnabled()) {
+            user.setEnabled(false);
+            userRepository.save(user);
+        }
+    }
+
+    public void updateLastLogin(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> {
+                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+                });
+
         user.setUpdatedAt(Instant.now());
-        userRepository.save(user);
     }
 
-    @Transactional
-    public User updatePassword(User user, String newRawPassword) {
-        user.setPassword(passwordEncoder.encode(newRawPassword));
+    public UserResponse updatePassword(UpdatePasswordRequest request) {
+        User user = userRepository.findById(request.getId())
+                .orElseThrow(() -> {
+                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+                });
+
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setUpdatedAt(Instant.now());
-        return userRepository.save(user);
+        User newUser = userRepository.save(user);
+        return userMapper.toUserResponse(newUser);
     }
 
-    @Transactional
-    public User setEnabled(User user, boolean enabled) {
-        user.setEnabled(enabled);
-        user.setUpdatedAt(Instant.now());
-        return userRepository.save(user);
-    }
 }
