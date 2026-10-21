@@ -1,8 +1,10 @@
 package com.example.ztna_server.config;
 
+import com.example.ztna_server.entity.Resource;
 import com.example.ztna_server.entity.User;
 import com.example.ztna_server.entity.UserRole;
 import com.example.ztna_server.enums.Role;
+import com.example.ztna_server.repository.ResourceRepository;
 import com.example.ztna_server.repository.SystemRoleRepository;
 import com.example.ztna_server.repository.UserRepository;
 import com.example.ztna_server.repository.UserRoleRepository;
@@ -22,9 +24,47 @@ public class DataInit implements CommandLineRunner {
     private final SystemRoleRepository systemRoleRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ResourceRepository resourceRepository;
 
     @Override
     public void run(String... args) {
+
+        if (resourceRepository.count() == 0) {
+
+            // 1. Resource Nginx
+            Resource web = Resource.builder()
+                    .name("Demo Web Nginx")
+                    .description("Trang web demo chạy Nginx Alpine (Cổng 8082)")
+                    // Lưu ý: Nếu Spring Boot chạy trên máy host, dùng localhost.
+                    // Nếu Spring Boot nằm trong Docker, đổi thành host.docker.internal
+                    .backendUrl("http://localhost:8082")
+                    .enabled(true)
+                    .build();
+
+            // 2. Resource SSH
+            Resource ssh = Resource.builder()
+                    .name("Demo SSH Server")
+                    .description("Máy chủ Linux giả lập SSH (Cổng 8083)")
+                    .backendUrl("http://localhost:8083")
+                    .enabled(true)
+                    .build();
+
+            // 3. Resource MySQL
+            Resource mysql = Resource.builder()
+                    .name("Demo Database MySQL")
+                    .description("Cơ sở dữ liệu MySQL 8.0 (Cổng 8081)")
+                    .backendUrl("http://localhost:8081")
+                    .enabled(true)
+                    .build();
+
+            // Lưu tất cả vào Database
+            resourceRepository.saveAll(List.of(web, ssh, mysql));
+
+            System.out.println("====== ĐÃ TỰ ĐỘNG THÊM 3 RESOURCE DEMO VÀO DATABASE ======");
+
+        }
+
+
         if (userRepository.count() > 0) {
             System.out.println("ℹ️  Users đã có, bỏ qua seed.");
             return;

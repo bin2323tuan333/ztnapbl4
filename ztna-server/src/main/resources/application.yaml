@@ -74,4 +74,5 @@ logging:
 app:
   jwt:
     secret: "your-very-long-secret-key-at-least-32-characters-long-abcxyz"
-    expiration-ms: 604800000
+    refresh-expiration-ms: 604800000
+    access-expiration-ms: 900000

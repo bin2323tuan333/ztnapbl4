@@ -29,7 +29,7 @@ public class Resource {
 
     @Column(nullable = false)
     @Builder.Default
-    private boolean enabled = true;
+    private Boolean enabled = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

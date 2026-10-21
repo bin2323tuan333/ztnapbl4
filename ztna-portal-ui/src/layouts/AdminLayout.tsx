@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
-import './MainLayout.css';
+import './AdminLayout.css';
 
-const MainLayout = () => {
+const AdminLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
 
     return (
@@ -22,4 +22,4 @@ const MainLayout = () => {
     );
 };
 
-export default MainLayout;
+export default AdminLayout;

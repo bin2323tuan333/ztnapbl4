@@ -21,10 +21,7 @@ const Header: React.FC = () => {
     }, []);
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
-        localStorage.removeItem('role');
-        localStorage.removeItem('allowedApps');
+        localStorage.removeItem('accessToken');
         navigate('/');
     };
 

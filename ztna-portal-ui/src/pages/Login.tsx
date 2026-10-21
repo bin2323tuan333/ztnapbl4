@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Shield, User, Lock, LogIn } from 'lucide-react';
 import { getCurrentUser } from '../utils/auth';
 import './Login.css';
+import { postRequest } from '../utils/apiClient';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -22,25 +23,19 @@ const Login = () => {
 
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:443/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-            });
+            const data = await postRequest("/auth/login", {
+                username,
+                password
+            })
 
-            const data = await res.json();
-
-            if (!res.ok) {
-                setError(data.message || "Đăng nhập thất bại");
-                return;
-            }
-
-            localStorage.setItem('token', data.token);
+            localStorage.setItem('accessToken', data.accessToken);
 
             const me = getCurrentUser();
-            navigate(me?.role === 'ADMIN' ? '/app/home' : '/portal');
-        } catch (err) {
-            console.error(err);
+            if (me?.role === 'ADMIN') navigate("/app/home");
+            else if (me?.role === 'USER') navigate("/portal");
+
+        } catch (err: any) {
+            console.error(err.message);
             setError("Không kết nối được server");
         } finally {
             setLoading(false);

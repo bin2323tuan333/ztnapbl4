@@ -2,21 +2,15 @@ import { jwtDecode } from 'jwt-decode';
 
 export interface JwtPayload {
     sub: string;
-    userId: number;
-    role: 'ADMIN' | 'USER';
-    allowedApps: string[];
+    role: string
     exp: number;
 }
 
 export function getCurrentUser(): JwtPayload | null {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) return null;
     try {
         const payload = jwtDecode<JwtPayload>(token);
-        if (payload.exp * 1000 < Date.now()) {
-            localStorage.removeItem('token');
-            return null;
-        }
         return payload;
     } catch {
         return null;

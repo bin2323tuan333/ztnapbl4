@@ -1,23 +1,16 @@
 package com.example.ztna_server.service;
 
-import com.example.ztna_server.dto.internal.UserInfo;
 import com.example.ztna_server.dto.request.LoginRequest;
-import com.example.ztna_server.dto.request.TokenLoginRequest;
+import com.example.ztna_server.dto.response.AuthResponse;
 import com.example.ztna_server.dto.response.LoginResponse;
 import com.example.ztna_server.entity.RefreshToken;
 import com.example.ztna_server.entity.User;
-import com.example.ztna_server.entity.UserRole;
 import com.example.ztna_server.enums.ErrorCode;
-import com.example.ztna_server.enums.Role;
 import com.example.ztna_server.exception.AppException;
 import com.example.ztna_server.repository.RefreshTokenRepository;
 import com.example.ztna_server.repository.UserRepository;
 import com.example.ztna_server.repository.UserRoleRepository;
-import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -33,10 +26,9 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-    private final UserRoleRepository userRoleRepository;
     private final RefreshTokenRepository refreshTokenRepository;
 
-    public LoginResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> {
                     return new AppException(ErrorCode.INVALID_CREDENTIALS);
@@ -52,36 +44,68 @@ public class AuthService {
 
         userService.updateLastLogin(user.getId());
 
+        Optional<RefreshToken> existRefresdToken = refreshTokenRepository.findByUserId(user.getId());
 
-        String token = jwtService.generateToken(user);
-        Date date = jwtService.getExpiresAt(token);
+        String refrenshToken;
+        String accessToken = jwtService.generateAccessToken(user);
+
+        if (existRefresdToken.isPresent() && !jwtService.isTokenExpired(existRefresdToken.get().getToken())) {
+            refrenshToken = existRefresdToken.get().getToken();
+
+            return AuthResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refrenshToken)
+                    .build();
+        } else if (existRefresdToken.isPresent()) {
+            refreshTokenRepository.delete(existRefresdToken.get());
+        }
+
+
+        refrenshToken = jwtService.generateRefreshToken(user);
         RefreshToken newRefreshToken = RefreshToken.builder()
-                .token(token)
-                .expiredAt(date.toInstant())
+                .token(refrenshToken)
+                .expiredAt(jwtService.extractExpiration(refrenshToken).toInstant())
                 .user(user)
+                .active(true)
                 .build();
+        refreshTokenRepository.save(newRefreshToken);
 
-        return LoginResponse.builder()
-                .token(token)
+
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refrenshToken)
                 .build();
     }
 
     public void logout(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> {
-                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-                });
-
-        refreshTokenRepository.findByUserId(user.getId())
+        refreshTokenRepository.findByUserId(id)
                 .ifPresentOrElse((refreshToken) -> {
                     refreshTokenRepository.delete(refreshToken);
                 },() -> {
-                    throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+
                 });
+    }
+
+    public LoginResponse refresh(String refreshTokenStr) {
+        RefreshToken dbToken = refreshTokenRepository.findByToken(refreshTokenStr)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_TOKEN));
+
+        if (dbToken.getExpiredAt().isBefore(Instant.now())) {
+            refreshTokenRepository.delete(dbToken);
+            throw new AppException(ErrorCode.REFRESH_TOKEN_EXPIRED);
+        }
+
+        User user = dbToken.getUser();
+
+        String newAccessToken = jwtService.generateAccessToken(user);
+
+        return LoginResponse.builder()
+                .accessToken(newAccessToken)
+                .build();
     }
 
     public void logoutAll() {
         refreshTokenRepository.deleteAll();
     }
-
 }

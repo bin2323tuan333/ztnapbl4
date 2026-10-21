@@ -9,7 +9,8 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH_001","Invalid username or password"),
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "AUTH_002", "Authentication required"),
-    TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH_003", "Token has expired"),
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_004", "Token not valid"),
+    REFRESH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH_004", "Token has expired"),
     ACCOUNT_LOCKED(HttpStatus.FORBIDDEN, "AUTH_010", "Account is blocked"),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "AUTH_011", "You do not have permission"),
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VAL_001", "Validation failed"),

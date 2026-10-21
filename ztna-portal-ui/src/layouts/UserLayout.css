@@ -1,0 +1,29 @@
+
+.ml-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; 
+    overflow: hidden;
+    background-color: #f9fafb;
+}
+
+
+.ml-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.ml-content-inner {
+    padding: 24px;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    box-sizing: border-box; 
+}
+
+@media (max-width: 768px) {
+    .ml-content-inner {
+        padding: 16px;
+    }
+}

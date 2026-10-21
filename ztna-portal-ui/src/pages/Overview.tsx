@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Shield, Lock, Eye, ArrowRight } from 'lucide-react';
 import './Overview.css';
+import { getCurrentUser } from '../utils/auth';
 
 const Overview = () => {
     const navigate = useNavigate();
@@ -37,7 +38,16 @@ const Overview = () => {
                         Bảo vệ tài nguyên doanh nghiệp với xác thực đa lớp và kiểm soát chi tiết.
                     </p>
                     <div className="ov-actions">
-                        <button className="ov-btn-primary" onClick={() => navigate('/login')}>
+                        <button className="ov-btn-primary" onClick={() => {
+                            const me = getCurrentUser();
+                            if (me == null) {
+                                navigate("/login");
+                                return;
+                            }
+
+                            if (me?.role === 'ADMIN') navigate("/app/home");
+                            else if (me?.role === 'USER') navigate("/portal");
+                        }}>
                             <span>Đăng nhập</span>
                             <ArrowRight size={18} />
                         </button>
