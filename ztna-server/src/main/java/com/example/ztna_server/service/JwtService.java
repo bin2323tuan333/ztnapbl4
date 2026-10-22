@@ -5,6 +5,7 @@ import com.example.ztna_server.repository.UserRepository;
 import com.example.ztna_server.repository.UserRoleRepository;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.Claims
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -83,5 +84,13 @@ public class JwtService {
                 .getPayload()
                 .getExpiration()
                 .before(new Date());
+    }
+
+    public Claims parseClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(key())
+                .build()
+                .parseSignedClaims(token)   
+                .getPayload();
     }
 }
