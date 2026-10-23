@@ -24,6 +24,9 @@ public enum ErrorCode {
     ROLE_IN_USE(HttpStatus.CONFLICT, "ROLE_002", "Role still has members or permissions, remove them first"),
     ROLE_ALREADY_ASSIGNED(HttpStatus.CONFLICT, "ROLE_003", "User already has this role"),
     ROLE_NOT_ASSIGNED(HttpStatus.NOT_FOUND, "ROLE_004", "User does not have this role"),
+    PERMISSION_EXISTED(HttpStatus.CONFLICT, "PERM_001", "Permission already granted"),
+    PERMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "PERM_002", "Permission not found"),
+    INVALID_EXPIRY(HttpStatus.BAD_REQUEST, "PERM_003", "Expiry time must be in the future"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS_001", "Something went wrong");
 
     private final HttpStatus status;
