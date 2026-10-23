@@ -3,13 +3,18 @@ package com.example.ztna_server.service;
 import com.example.ztna_server.dto.internal.UserInfo;
 import com.example.ztna_server.dto.request.CreateUserRequest;
 import com.example.ztna_server.dto.request.UpdatePasswordRequest;
+import com.example.ztna_server.dto.request.UpdateUserRequest;
 import com.example.ztna_server.dto.response.UserResponse;
 import com.example.ztna_server.entity.User;
 import com.example.ztna_server.enums.ErrorCode;
+import com.example.ztna_server.enums.Role;
 import com.example.ztna_server.exception.AppException;
 import com.example.ztna_server.mapper.UserMapper;
+import com.example.ztna_server.repository.RefreshTokenRepository;
 import com.example.ztna_server.repository.UserRepository;
+import com.example.ztna_server.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -21,43 +26,52 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
 
+    // ───────────── Dùng nội bộ (AuthService...) ─────────────
+
     public UserInfo getUserByUsername(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> {
-                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-                });
-
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
         return userMapper.toUserInfo(user);
     }
 
     public UserInfo getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> {
-                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-                });
-
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
         return userMapper.toUserInfo(user);
     }
 
     public UserInfo getUserById(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> {
-                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-                });
-
-        return userMapper.toUserInfo(user);
+        return userMapper.toUserInfo(findUser(id));
     }
 
+    public void updateLastLogin(UUID id) {
+        User user = findUser(id);
+        user.setLastLoginAt(Instant.now());
+        userRepository.save(user);
+    }
+
+    // ───────────── Quản lý user (admin) ─────────────
+
+    public List<UserResponse> getUsers() {
+        return userRepository.findAll().stream()
+                .map(userMapper::toUserResponse)
+                .toList();
+    }
+
+    public UserResponse getUserByID(UUID id) {
+        return userMapper.toUserResponse(findUser(id));
+    }
 
     public UserResponse createUser(CreateUserRequest request) {
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+        if (userRepository.existsByUsername(request.getUsername())) {
             throw new AppException(ErrorCode.USERNAME_EXISTED);
         }
-
-        if (request.getEmail() != null && userRepository.findByEmail(request.getEmail()).isPresent()) {
+        String email = normalizeEmail(request.getEmail());
+        if (email != null && userRepository.existsByEmail(email)) {
             throw new AppException(ErrorCode.EMAIL_EXISTED);
         }
 
@@ -65,83 +79,94 @@ public class UserService {
                 .username(request.getUsername())
                 .fullName(request.getFullName())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .email(request.getEmail())
+                .email(email)
+                .role(request.getRole() != null ? request.getRole() : Role.USER)
                 .enabled(true)
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
                 .build();
-        User saveUser = userRepository.save(user);
-        return userMapper.toUserResponse(saveUser);
+
+        return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    public List<UserResponse> getUsers() {
-        List<User> users = userRepository.findAll();
+    public UserResponse updateUser(UUID id, UpdateUserRequest request) {
+        User user = findUser(id);
 
-        return users.stream()
-                .map(userMapper::toUserResponse)
-                .toList();
-    }
+        String email = normalizeEmail(request.getEmail());
+        if (email != null) {
+            userRepository.findByEmail(email)
+                    .filter(other -> !other.getId().equals(id))
+                    .ifPresent(other -> { throw new AppException(ErrorCode.EMAIL_EXISTED); });
+        }
 
-    public UserResponse getUserByID(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> {
-                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-                });
+        if (request.getRole() != null && request.getRole() != user.getRole()) {
+            ensureNotSelf(id); // admin không tự hạ quyền của chính mình
+            user.setRole(request.getRole());
+        }
 
-        return userMapper.toUserResponse(user);
-    }
-
-    public void deleteUser(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> {
-                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-                });
-        userRepository.delete(user);
+        user.setFullName(request.getFullName());
+        user.setEmail(email);
+        user.setUpdatedAt(Instant.now());
+        return userMapper.toUserResponse(userRepository.save(user));
     }
 
     public void blockUser(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> {
-                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-                });
-
+        ensureNotSelf(id);
+        User user = findUser(id);
         if (user.getEnabled()) {
             user.setEnabled(false);
+            user.setUpdatedAt(Instant.now());
             userRepository.save(user);
         }
+        // Thu hồi refresh token: user bị khóa không xin được access token mới
+        refreshTokenRepository.findByUserId(id).ifPresent(refreshTokenRepository::delete);
     }
 
     public void unblockUser(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> {
-                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-                });
-
+        User user = findUser(id);
         if (!user.getEnabled()) {
-            user.setEnabled(false);
+            user.setEnabled(true);
+            user.setUpdatedAt(Instant.now());
             userRepository.save(user);
         }
     }
 
-    public void updateLastLogin(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> {
-                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-                });
-
-        user.setUpdatedAt(Instant.now());
-    }
-
-    public UserResponse updatePassword(UpdatePasswordRequest request) {
-        User user = userRepository.findById(request.getId())
-                .orElseThrow(() -> {
-                    return new AppException(ErrorCode.RESOURCE_NOT_FOUND);
-                });
-
+    public void resetPassword(UUID id, UpdatePasswordRequest request) {
+        User user = findUser(id);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setUpdatedAt(Instant.now());
-        User newUser = userRepository.save(user);
-        return userMapper.toUserResponse(newUser);
+        userRepository.save(user);
+        // Đổi mật khẩu thì đăng xuất các phiên cũ
+        refreshTokenRepository.findByUserId(id).ifPresent(refreshTokenRepository::delete);
     }
 
+    public void deleteUser(UUID id) {
+        ensureNotSelf(id);
+        User user = findUser(id);
+        refreshTokenRepository.findByUserId(id).ifPresent(refreshTokenRepository::delete);
+        try {
+            userRepository.delete(user);
+            userRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            // User đã có log / phân quyền trỏ tới → không xóa được, nên khóa thay vì xóa
+            throw new AppException(ErrorCode.USER_IN_USE);
+        }
+    }
+
+    // ───────────── Hàm phụ ─────────────
+
+    private User findUser(UUID id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+    }
+
+    private void ensureNotSelf(UUID id) {
+        if (id.equals(SecurityUtils.currentUserId())) {
+            throw new AppException(ErrorCode.CANNOT_MODIFY_SELF);
+        }
+    }
+
+    private String normalizeEmail(String email) {
+        return (email == null || email.isBlank()) ? null : email.trim();
+    }
 }
