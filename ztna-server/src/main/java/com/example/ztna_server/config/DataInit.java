@@ -64,6 +64,18 @@ public class DataInit implements CommandLineRunner {
 
         }
 
+        if (systemRoleRepository.count() == 0) {
+            Instant t = Instant.now();
+            systemRoleRepository.saveAll(List.of(
+                    SystemRole.builder().name("DEV").displayName("Lập trình viên")
+                            .description("Nhóm phát triển, được vào web và SSH demo").createdAt(t).updatedAt(t).build(),
+                    SystemRole.builder().name("DBA").displayName("Quản trị CSDL")
+                            .description("Nhóm quản trị cơ sở dữ liệu, được vào MySQL demo").createdAt(t).updatedAt(t).build(),
+                    SystemRole.builder().name("KE_TOAN").displayName("Kế toán")
+                            .description("Nhóm kế toán, chỉ được vào web demo").createdAt(t).updatedAt(t).build()
+            ));
+            System.out.println("====== ĐÃ TỰ ĐỘNG THÊM 3 ROLE DEMO: DEV, DBA, KE_TOAN ======");
+        }
 
         if (userRepository.count() > 0) {
             System.out.println("ℹ️  Users đã có, bỏ qua seed.");
