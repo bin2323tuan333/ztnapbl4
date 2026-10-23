@@ -1,6 +1,7 @@
 package com.example.ztna_server.config;
 
 import com.example.ztna_server.entity.Resource;
+import com.example.ztna_server.entity.SystemRole;
 import com.example.ztna_server.entity.User;
 import com.example.ztna_server.entity.UserRole;
 import com.example.ztna_server.enums.Role;
