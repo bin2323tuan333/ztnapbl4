@@ -5,7 +5,7 @@ import com.example.ztna_server.dto.App;
 import com.example.ztna_server.protocol.*;
 import com.example.ztna_server.protocol.frames.*;
 import com.example.ztna_server.routes.ConnectionRegister;
-import com.example.ztna_server.routes.RoutingTable;
+import com.example.ztna_server.service.RoutingService;
 import com.example.ztna_server.routes.Session;
 import com.example.ztna_server.routes.SessionManager;
 import com.example.ztna_server.service.ConnectionLifecycleService;
@@ -31,7 +31,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
-    private final RoutingTable routingTable;
+    private final RoutingService routingService;
     private final ConnectionLifecycleService connectionLifecycleService;
     private final SessionLifecycleService sessionLifecycleService;
 
@@ -94,7 +94,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
 
         log.info("[Connector] {} registered", connectorId);
 
-        List<App> apps = routingTable.getAppsByConnector(connectorId);
+        List<App> apps = routingService.reload(connectorId);
         log.info("[Connector] {} has {} apps", connectorId, apps.size());
 
         RoutingResFrame res = new RoutingResFrame();
