@@ -27,6 +27,9 @@ public enum ErrorCode {
     PERMISSION_EXISTED(HttpStatus.CONFLICT, "PERM_001", "Permission already granted"),
     PERMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "PERM_002", "Permission not found"),
     INVALID_EXPIRY(HttpStatus.BAD_REQUEST, "PERM_003", "Expiry time must be in the future"),
+    APP_EXISTED(HttpStatus.CONFLICT, "APP_001", "Application name already exists"),
+    APP_IN_USE(HttpStatus.CONFLICT, "APP_002", "Application still has permissions or logs, disable it instead of deleting"),
+    INVALID_BACKEND_URL(HttpStatus.BAD_REQUEST, "APP_003", "Backend URL must contain host and port, e.g. http://10.0.0.5:8080"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS_001", "Something went wrong");
 
     private final HttpStatus status;
