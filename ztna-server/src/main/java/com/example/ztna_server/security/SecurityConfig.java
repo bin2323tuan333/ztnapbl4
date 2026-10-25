@@ -40,7 +40,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()          // preflight CORS
-                        .requestMatchers("/auth/login", "/auth/refresh").permitAll()      // chưa có token
+                        .requestMatchers("/auth/login", "/auth/refresh", "/error").permitAll()    
                         .requestMatchers("/admin/**").hasRole("ADMIN")                    // API quản trị
                         .anyRequest().authenticated()                                     // còn lại phải đăng nhập
                 )
