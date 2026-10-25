@@ -4,11 +4,15 @@ import com.example.ztna_server.entity.Resource;
 import com.example.ztna_server.entity.SystemRole;
 import com.example.ztna_server.entity.User;
 import com.example.ztna_server.entity.UserRole;
+import com.example.ztna_server.entity.Connector;
+import com.example.ztna_server.entity.ConnectorResource;
 import com.example.ztna_server.enums.Role;
 import com.example.ztna_server.repository.ResourceRepository;
 import com.example.ztna_server.repository.SystemRoleRepository;
 import com.example.ztna_server.repository.UserRepository;
 import com.example.ztna_server.repository.UserRoleRepository;
+import com.example.ztna_server.repository.ConnectorRepository;
+import com.example.ztna_server.repository.ConnectorResourceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +30,8 @@ public class DataInit implements CommandLineRunner {
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
     private final ResourceRepository resourceRepository;
+    private final ConnectorRepository connectorRepository;
+    private final ConnectorResourceRepository connectorResourceRepository;
 
     @Override
     public void run(String... args) {
@@ -63,6 +69,23 @@ public class DataInit implements CommandLineRunner {
 
             System.out.println("====== ĐÃ TỰ ĐỘNG THÊM 3 RESOURCE DEMO VÀO DATABASE ======");
 
+        }
+
+                if (connectorRepository.count() == 0) {
+            // Connector demo "conn_01" (trùng với connectorId trong ConnectorApp) phụ trách mọi app hiện có
+            Connector conn = connectorRepository.save(Connector.builder()
+                    .name("conn_01")
+                    .connectionStringOrConfig("{}")
+                    .enabled(true)
+                    .build());
+            for (Resource r : resourceRepository.findAll()) {
+                connectorResourceRepository.save(ConnectorResource.builder()
+                        .connector(conn)
+                        .resource(r)
+                        .enabled(true)
+                        .build());
+            }
+            System.out.println("====== ĐÃ TỰ ĐỘNG THÊM CONNECTOR conn_01 VÀ GÁN CÁC APP DEMO ======");
         }
 
         if (systemRoleRepository.count() == 0) {
