@@ -127,7 +127,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
         ConnectAckFrame frame = new ConnectAckFrame();
         frame.decode(data);
 
-        int streamId = frame.getStreamId();
+        String streamId = frame.getStreamId();
         byte status = frame.getStatus();
 
         if (status == 0x00) {
@@ -148,7 +148,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
         CloseFrame frame = new CloseFrame();
         frame.decode(data);
 
-        int streamId = frame.getStreamId();
+        String streamId = frame.getStreamId();
         String reason = frame.getReasonText();
 
         log.info("[Connector] CLOSE stream={} reason={}", streamId, reason);

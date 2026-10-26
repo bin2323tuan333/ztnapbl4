@@ -11,7 +11,6 @@ public class OpenReqFrame extends Frame {
     private String appId;
     private String jwt;
 
-    // Constructor rỗng cho FrameRegistry
     public OpenReqFrame() {
         super(FrameType.OPEN_REQUEST);
     }

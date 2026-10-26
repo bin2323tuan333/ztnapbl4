@@ -22,8 +22,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Scope("prototype")
 @RequiredArgsConstructor
-public class AppWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
-
+public class ResourceWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     private final JwtService jwtService;
     private final UserManager userManager;
     private final SessionLifecycleService sessionLifecycleService;
@@ -50,6 +49,7 @@ public class AppWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
             ctx.close();
             return;
         }
+
         if (!(frame instanceof BinaryWebSocketFrame bin)) {
             log.warn("[User] Unsupported frame: {}", frame.getClass().getSimpleName());
             return;
@@ -72,19 +72,17 @@ public class AppWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         }
     }
     private void handleOpenRequest(ChannelHandlerContext ctx, ByteBuf buf) {
-        // 1. Decode
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
 
         OpenReqFrame req = new OpenReqFrame();
         req.decode(data);
 
-        String appId = req.getAppId();
+        String resourceId = req.getAppId();
         String jwt = req.getJwt();
 
-        log.info("[App] OPEN_REQUEST appId={} jwtLen={}",
-                appId, jwt == null ? 0 : jwt.length());
-
+        log.info("[App] OPEN_REQUEST appId={} jwtLen={}", resourceId, jwt == null ? 0 : jwt.length());
+        String uid = "admin1";
 //        String uid = jwtService.verifyAndGetUserId(jwt);
 //        if (uid == null) {
 //            log.warn("[App] JWT invalid hoặc hết hạn → reject");
@@ -105,10 +103,8 @@ public class AppWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 //                    "User mismatch on same connection");
 //            return;
 //        }
-        String uid = "admin1";
 
-        // 4. Mở session
-        Session session = sessionLifecycleService.openSession(uid, appId, ctx.channel());
+        Session session = sessionLifecycleService.openSession(uid, resourceId, ctx.channel());
         if (session == null) {
             sendOpenFailed(ctx, OpenResFrame.STATUS_APP_NOT_FOUND,
                     "App không tồn tại hoặc Connector offline");
@@ -121,11 +117,11 @@ public class AppWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         ));
 
         log.info("[App] OPEN_OK streamId={} user={} app={}",
-                session.getStreamId(), uid, appId);
+                session.getStreamId(), uid, resourceId);
     }
 
     private void sendOpenFailed(ChannelHandlerContext ctx, byte status, String reason) {
-        OpenResFrame resp = OpenResFrame.failed(status, reason);
+        OpenResFrame resp = OpenResFrame.failed("", status, reason);
         ctx.writeAndFlush(new BinaryWebSocketFrame(
                 Unpooled.wrappedBuffer(resp.encode())
         ));
@@ -139,7 +135,7 @@ public class AppWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         CloseFrame frame = new CloseFrame();
         frame.decode(data);
 
-        int streamId = frame.getStreamId();
+        String streamId = frame.getStreamId();
         String reason = frame.getReasonText();
 
         log.info("[User] CLOSE stream={} reason={}", streamId, reason);

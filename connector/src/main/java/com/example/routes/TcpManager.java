@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TcpManager {
     private static TcpManager instance = new TcpManager();
-    Map<Integer, Channel> sessions = new ConcurrentHashMap<>();
+    Map<String, Channel> sessions = new ConcurrentHashMap<>();
 
     private TcpManager() {
 
@@ -17,19 +17,19 @@ public class TcpManager {
         return  instance;
     }
 
-    public Channel getChannel(int sessionId) {
-        return sessions.get(sessionId);
+    public Channel getChannel(String streamId) {
+        return sessions.get(streamId);
     }
 
-    public void add(int streamId, Channel channel) {
+    public void add(String streamId, Channel channel) {
         sessions.put(streamId, channel);
     }
 
-    public void remove(int streamId) {
+    public void remove(String streamId) {
         sessions.remove(streamId);
     }
 
-    public Map<Integer, Channel> getSessions() {
+    public Map<String, Channel> getSessions() {
         return sessions;
     }
 }

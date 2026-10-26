@@ -1,15 +1,78 @@
+#spring:
+#  application:
+#    name: ztna-server
+#
+#  datasource:
+#    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?allowPublicKeyRetrieval=true&useSSL
+#    username: ${DB_USER}
+#    password: ${DB_PASSWORD}
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#
+#
+#ztna:
+#  netty:
+#    port: ${NETTY_PORT:8443}
+#    boss-threads: ${NETTY_BOSS_THREADS:1}
+#    worker-threads: ${NETTY_WORKER_THREADS:8}
+#  jwt:
+#    secret: ${JWT_SECRET}
+#    ttl-minutes: ${JWT_TTL_MINUTES:60}
+#  connector:
+#    token: ${CONNECTOR_TOKEN}
+#server:
+#  port: 443
+#  ssl:
+#    enabled: true
+#    key-store: classpath:keystore.p12
+#    key-store-password: changeit
+#    key-store-type: PKCS12
+
+server:
+  port: 443
 spring:
+  application:
+    name: ztna-server
+
   datasource:
-    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: jdbc:mysql://localhost:3306/ztna_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
-      ddl-auto: create-drop
-    database-platform: org.hibernate.dialect.H2Dialect
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
+
+
+netty:
+  port: 8443
+  boss-threads: 1
+  worker-threads: 8
+
+
+jwt:
+  secret: change-me-min-32-bytes-long-secret-please
+  ttl-minutes: 60
+
+
+connector:
+  token: connector-demo-token-abc123
+
+logging:
+  level:
+    root: INFO
+    com.ztna: DEBUG
+    org.hibernate.SQL: DEBUG
 
 app:
   jwt:
-    secret: "this-is-a-dummy-secret-key-for-testing-purposes-only-32-chars"
-    expiration-ms: 604800000
+    secret: "your-very-long-secret-key-at-least-32-characters-long-abcxyz"
+    refresh-expiration-ms: 604800000
+    access-expiration-ms: 900000

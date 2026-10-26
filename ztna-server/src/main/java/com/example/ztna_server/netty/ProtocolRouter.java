@@ -14,12 +14,12 @@ import org.springframework.stereotype.Component;
 @Component
 @ChannelHandler.Sharable
 public class ProtocolRouter extends ChannelInboundHandlerAdapter {
-    private final AppWsHandler appWsHandler;
+    private final ResourceWsHandler resourceWsHandler;
     private final RestApiHandler restApiHandler;
     private final StaticFileHandler staticFileHandler;
 
-    public ProtocolRouter(AppWsHandler appWsHandler, RestApiHandler restApiHandler, StaticFileHandler staticFileHandler) {
-        this.appWsHandler = appWsHandler;
+    public ProtocolRouter(ResourceWsHandler resourceWsHandler, RestApiHandler restApiHandler, StaticFileHandler staticFileHandler) {
+        this.resourceWsHandler = resourceWsHandler;
         this.restApiHandler = restApiHandler;
         this.staticFileHandler = staticFileHandler;
     }
@@ -51,7 +51,7 @@ public class ProtocolRouter extends ChannelInboundHandlerAdapter {
                             true
                     )
             );
-            ctx.pipeline().addLast(appWsHandler);
+            ctx.pipeline().addLast(resourceWsHandler);
             ctx.fireChannelRead(req);
             return;
         }

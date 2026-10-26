@@ -2,7 +2,7 @@ package com.example.ztna_server;
 
 import com.example.ztna_server.dto.App;
 import com.example.ztna_server.netty.ConnectorWsHandler;
-import com.example.ztna_server.netty.AppWsHandler;
+import com.example.ztna_server.netty.ResourceWsHandler;
 import com.example.ztna_server.routes.RoutingTable;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -37,7 +37,7 @@ public class ZTNAServerBootstrap {
     private static final String DEMO_CONNECTOR_ID = "conn_01";
 
     private final ObjectProvider<ConnectorWsHandler> connectorProvider;
-    private final ObjectProvider<AppWsHandler> appProvider;
+    private final ObjectProvider<ResourceWsHandler> appProvider;
     private final RoutingTable routingTable;
 
     private EventLoopGroup bossGroup;

@@ -134,7 +134,7 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
 
         RoutingTable routingTable = RoutingTable.getInstance();
         App app = routingTable.get(connectFrame.getAppId());
-        int streamId = connectFrame.getStreamId();
+        String streamId = connectFrame.getStreamId();
         log.info("{}, {}", streamId, app.getName());
 
         tcpClient.connect(streamId, app.getHost(), app.getPort(), ctx.channel());
@@ -156,8 +156,8 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
         DataFrame frame = new DataFrame();
         frame.decode(data);
 
-        int streamId = frame.getStreamId();
-        byte[] payload = frame.getPayload();
+        String streamId = frame.getStreamId();
+        byte[] payload = frame.getData();
 
         if (payload == null || payload.length == 0) {
             log.debug("[Connector] DATA rỗng cho stream={}", streamId);
@@ -170,11 +170,16 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
 
     // CLOSE
     private void handleClose(ByteBuf buf) {
-        buf.readByte();
-        int streamId = buf.readInt();
-        byte reason = buf.readByte();
+        byte[] data = new byte[buf.readableBytes()];
+        buf.readBytes(data);
 
-        log.info("CLOSE: streamId={}, reason: {}", streamId, CloseFrame.reasonText(reason));
+        CloseFrame frame = new CloseFrame();
+        frame.decode(data);
+
+        String streamId = frame.getStreamId();
+        String reason = frame.getReasonText();
+
+        log.info("CLOSE: streamId={}, reason: {}", streamId, reason);
         tcpClient.close(streamId);
     }
 

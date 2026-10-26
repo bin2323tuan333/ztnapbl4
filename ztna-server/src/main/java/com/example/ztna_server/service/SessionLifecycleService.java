@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -47,7 +48,8 @@ public class SessionLifecycleService {
             return null;
         }
 
-        int streamId = sessionManager.nextStreamId();
+        // Sinh streamId dạng String UUID
+        String streamId = UUID.randomUUID().toString();
 
         Session session = Session.builder()
                 .streamId(streamId)
@@ -62,6 +64,7 @@ public class SessionLifecycleService {
 
         sessionManager.add(streamId, session);
 
+        // Gửi lệnh CONNECT xuống Agent (Connector)
         ConnectFrame cf = new ConnectFrame(streamId, appId);
         connCh.writeAndFlush(new BinaryWebSocketFrame(
                 Unpooled.wrappedBuffer(cf.encode())
@@ -74,7 +77,7 @@ public class SessionLifecycleService {
         return session;
     }
 
-    public void sessionDisconnect(int streamId, String reason) {
+    public void sessionDisconnect(String streamId, String reason) {
         Session session = sessionManager.remove(streamId);
         if (session == null) {
             return;
@@ -92,7 +95,7 @@ public class SessionLifecycleService {
         if (userCh == null || !userCh.isActive()) return;
 
         CloseFrame cf = new CloseFrame();
-        cf.setStreamId(session.getStreamId());
+        cf.setStreamId(session.getStreamId()); // Đã đổi thành String
 
         userCh.writeAndFlush(new BinaryWebSocketFrame(
                 Unpooled.wrappedBuffer(cf.encode())
@@ -104,7 +107,7 @@ public class SessionLifecycleService {
         if (connCh == null || !connCh.isActive()) return;
 
         CloseFrame cf = new CloseFrame();
-        cf.setStreamId(session.getStreamId());
+        cf.setStreamId(session.getStreamId()); // Đã đổi thành String
 
         connCh.writeAndFlush(new BinaryWebSocketFrame(
                 Unpooled.wrappedBuffer(cf.encode())
@@ -118,8 +121,8 @@ public class SessionLifecycleService {
         DataFrame frame = new DataFrame();
         frame.decode(data);
 
-        int streamId = frame.getStreamId();
-        byte[] payload = frame.getPayload();
+        String streamId = frame.getStreamId(); // String
+        byte[] payload = frame.getData();
 
         if (payload == null || payload.length == 0) {
             log.debug("[Lifecycle] DATA rỗng cho stream={}", streamId);
@@ -128,10 +131,9 @@ public class SessionLifecycleService {
 
         Session session = sessionManager.get(streamId);
         if (session == null || !(session.getState() == Session.State.READY)) {
-            log.warn("[Lifecycle] Stream {} không tồn tại", streamId);
+            log.warn("[Lifecycle] Stream {} không tồn tại hoặc chưa READY", streamId);
             return;
         }
-
 
         Channel conChannel = session.getWsChannel();
         if (conChannel == null || !conChannel.isActive()) {
@@ -156,20 +158,19 @@ public class SessionLifecycleService {
         DataFrame frame = new DataFrame();
         frame.decode(data);
 
-        int streamId = frame.getStreamId();
-        byte[] payload = frame.getPayload();
+        String streamId = frame.getStreamId(); // SỬA: Đổi từ int sang String
+        byte[] payload = frame.getData();      // SỬA: Đổi từ getPayload() sang getData()
 
         if (payload == null || payload.length == 0) {
             log.debug("[Lifecycle] DATA rỗng cho stream={}", streamId);
             return;
         }
 
-        Session session =  sessionManager.get(streamId);
+        Session session = sessionManager.get(streamId);
         if (session == null || !(session.getState() == Session.State.READY)) {
-            log.warn("[Lifecycle] Stream {} không tồn tại", streamId);
+            log.warn("[Lifecycle] Stream {} không tồn tại hoặc chưa READY", streamId);
             return;
         }
-
 
         Channel clientCh = session.getUserChannel();
         if (clientCh == null || !clientCh.isActive()) {
@@ -200,10 +201,9 @@ public class SessionLifecycleService {
         for (Session item : list) {
             sessionDisconnect(item.getStreamId(), "CONNECTOR DISCONNECT");
         }
-
     }
 
-    public void onConnectAckOk(int streamId) {
+    public void onConnectAckOk(String streamId) {
         Session session = sessionManager.get(streamId);
         if (session == null) {
             log.warn("[Lifecycle] CONNECT_ACK cho stream không tồn tại: {}", streamId);
@@ -216,7 +216,8 @@ public class SessionLifecycleService {
         log.info("[Lifecycle] Stream {} READY", streamId);
     }
 
-    public void onConnectAckFailed(int streamId, String reason) {
+    // SỬA: Đổi tham số int thành String
+    public void onConnectAckFailed(String streamId, String reason) {
         sessionDisconnect(streamId, "CONNECT_FAILED: " + reason);
     }
 }

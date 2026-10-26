@@ -16,10 +16,10 @@ import java.util.function.Consumer;
 
 @Slf4j
 public class TcpToWsHandler extends SimpleChannelInboundHandler<ByteBuf> {
-    private final int streamId;
+    private final String streamId;
     private final Consumer<byte[]> frameSender;
 
-    public TcpToWsHandler(int streamId, Consumer<byte[]> frameSender) {
+    public TcpToWsHandler(String streamId, Consumer<byte[]> frameSender) {
         this.streamId = streamId;
         this.frameSender = frameSender;
     }

@@ -19,7 +19,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class TcpClient {
     private final EventLoopGroup group = new NioEventLoopGroup();
 
-    public void connect(int streamId, String host, int port, Channel wsChannel) {
+    public void connect(String streamId, String host, int port, Channel wsChannel) {
         Bootstrap b = new Bootstrap();
         b.group(group)
                 .channel(NioSocketChannel.class)
@@ -49,7 +49,7 @@ public class TcpClient {
         });
     }
 
-    public void close(int streamId) {
+    public void close(String streamId) {
         TcpManager tcpManager = TcpManager.getInstance();
         Channel channel = tcpManager.getChannel(streamId);
         tcpManager.remove(streamId);
@@ -61,7 +61,7 @@ public class TcpClient {
         }
     }
 
-    public void sendData(int streamId, byte[] payload) {
+    public void sendData(String streamId, byte[] payload) {
         if (payload == null || payload.length == 0) {
             return;
         }

@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Session {
     // ===== Định danh =====
-    private int streamId;
+    private String streamId;
     private String userId;
     private String appId;
     private String appName;

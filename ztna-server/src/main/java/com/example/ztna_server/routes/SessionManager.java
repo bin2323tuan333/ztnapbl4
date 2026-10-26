@@ -1,9 +1,5 @@
 package com.example.ztna_server.routes;
 
-import com.example.ztna_server.protocol.frames.CloseFrame;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -11,33 +7,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Component
 public class SessionManager {
-    // streamId → Session
-    private final Map<Integer, Session> sessions = new ConcurrentHashMap<>();
+    // streamId (String) → Session
+    private final Map<String, Session> sessions = new ConcurrentHashMap<>();
     // connectorId -> streamIds
-    private final Map<String, Set<Integer>> byConnector  = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> byConnector  = new ConcurrentHashMap<>();
     // userId -> StreamIds
-    private final Map<String, Set<Integer>> byUser = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> byUser = new ConcurrentHashMap<>();
 
-    // Sinh streamId
-    private final AtomicInteger idGen = new AtomicInteger(1000);
-
-
-    public int nextStreamId() {
-        return idGen.getAndIncrement();
+    // Sinh streamId ngẫu nhiên bằng UUID
+    public String nextStreamId() {
+        return UUID.randomUUID().toString();
     }
 
-
-
-
-    public void add(Integer streamId, Session session) {
+    public void add(String streamId, Session session) {
         sessions.put(streamId, session);
-        Set<Integer> set = byConnector.get(session.getConnectorId());
+
+        Set<String> set = byConnector.get(session.getConnectorId());
         if (set == null) {
             set = ConcurrentHashMap.newKeySet();
             byConnector.put(session.getConnectorId(), set);
@@ -52,7 +43,7 @@ public class SessionManager {
         set.add(streamId);
     }
 
-    public Session remove(Integer streamId) {
+    public Session remove(String streamId) {
         Session s = sessions.remove(streamId);
         if (s == null) {
             return null;
@@ -63,21 +54,21 @@ public class SessionManager {
         return s;
     }
 
-    private void removeFromIndex(Map<String, Set<Integer>> index, String key, int streamId) {
+    private void removeFromIndex(Map<String, Set<String>> index, String key, String streamId) {
         if (key == null) return;
-        Set<Integer> set = index.get(key);
+        Set<String> set = index.get(key);
         if (set != null) {
             set.remove(streamId);
             if (set.isEmpty()) index.remove(key);
         }
     }
 
-    public Session get(Integer streamId) {
+    public Session get(String streamId) {
         return sessions.get(streamId);
     }
 
     public List<Session> getByConnector(String connectorId) {
-        Set<Integer> ids = byConnector.get(connectorId);
+        Set<String> ids = byConnector.get(connectorId);
         if (ids == null) return List.of();
         return ids.stream()
                 .map(sessions::get)
@@ -86,7 +77,7 @@ public class SessionManager {
     }
 
     public List<Session> getByUser(String userId) {
-        Set<Integer> ids = byUser.get(userId);
+        Set<String> ids = byUser.get(userId);
         if (ids == null) return List.of();
         return ids.stream()
                 .map(sessions::get)

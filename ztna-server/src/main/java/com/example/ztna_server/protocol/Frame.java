@@ -29,8 +29,8 @@ public  abstract class Frame {
         return tmp;
     }
 
-    public abstract void decodePayload(byte[] data);
-    public abstract byte[] encodePayload();
+    protected abstract void decodePayload(byte[] data);
+    protected abstract byte[] encodePayload();
 
 
 
