@@ -87,8 +87,11 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
         Connector connector = connectorRepository.findByConnectionString(connectString)
                 .orElse(null);
 
-        if (connector == null) {
-            // send error res;
+        if (connector == null || !connector.isEnabled()) {
+            // Connector lạ hoặc đã bị tắt → không cho đăng ký, đóng kết nối
+            log.warn("[Connector] Từ chối connector không hợp lệ: {}", connectString);
+            ctx.close();
+            return;
         }
 
         this.connectorId = connector.getId().toString();

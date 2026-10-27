@@ -56,6 +56,7 @@ const request = async (path: string, method: string, body?: any) => {
 };
 
 export const getRequest = (path: string) => request(path, 'GET');
+export const patchRequest = (path: string, body?: any) => request(path, 'PATCH', body);
 
 export const postRequest = (path: string, body: any) => request(path, 'POST', body);
 
