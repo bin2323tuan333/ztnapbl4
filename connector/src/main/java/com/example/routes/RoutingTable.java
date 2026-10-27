@@ -1,12 +1,14 @@
 package com.example.routes;
 
 import com.example.model.App;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 
+@Slf4j
 public class RoutingTable {
     private static RoutingTable instance = new RoutingTable();
     private volatile  Map<String, App> routes = new ConcurrentHashMap<>();
@@ -23,10 +25,14 @@ public class RoutingTable {
 
     public void replaceAll(Map<String, App> newRoutes) {
         Map<String, App> fresh = new ConcurrentHashMap<>(newRoutes);
+        fresh.forEach((appId, app) -> {
+            log.info("[Routing Table] Nạp app: id={}, name={}", appId, app.getName());
+        });
         this.routes = fresh;
     }
 
     public void put(App app) {
+
         routes.put(app.getId(), app);
     }
 

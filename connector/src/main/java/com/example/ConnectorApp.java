@@ -12,12 +12,7 @@ public class ConnectorApp {
     public static void main(String[] args) {
         ConnectorConfig config = new ConnectorConfig(
                 "ws://localhost:8443/connector",
-                "connector-demo-token-abc123",
-                Map.of(
-                        "nginx", "127.0.0.1:8082",
-                        "ssh",   "127.0.0.1:8083",
-                        "mysql", "127.0.0.1:8081"
-                )
+                "toilaconnector1"
         );
 
         TcpClient tcpClient = new TcpClient();

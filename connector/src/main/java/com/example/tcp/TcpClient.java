@@ -19,7 +19,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class TcpClient {
     private final EventLoopGroup group = new NioEventLoopGroup();
 
-    public void connect(String streamId, String host, int port, Channel wsChannel) {
+    public ChannelFuture connect(String streamId, String host, int port, Channel wsChannel) {
         Bootstrap b = new Bootstrap();
         b.group(group)
                 .channel(NioSocketChannel.class)
@@ -31,7 +31,7 @@ public class TcpClient {
                     protected void initChannel(SocketChannel ch) {
                         Consumer<byte[]> sender = encoded -> {
                             if (wsChannel.isActive()) {
-                                wsChannel.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(encoded)) );
+                                wsChannel.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(encoded)));
                             } else {
                                 log.warn("[stream={}] WS channel không active", streamId);
                             }
@@ -40,13 +40,18 @@ public class TcpClient {
                     }
                 });
 
-        b.connect(host, port).addListener((ChannelFutureListener) f -> {
+        ChannelFuture future = b.connect(host, port);
+
+        future.addListener((ChannelFutureListener) f -> {
             if (f.isSuccess()) {
+                TcpManager.getInstance().add(streamId, f.channel());
                 log.info("TCP connected: stream={}, {}:{}", streamId, host, port);
             } else {
                 log.error("TCP failed: stream={}, {}:{}, err={}", streamId, host, port, f.cause().getMessage());
             }
         });
+
+        return future;
     }
 
     public void close(String streamId) {

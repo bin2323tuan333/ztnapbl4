@@ -1,9 +1,12 @@
 package com.example.ztna_server.config;
 
+import com.example.ztna_server.entity.Connector;
 import com.example.ztna_server.entity.Resource;
 import com.example.ztna_server.entity.User;
 import com.example.ztna_server.entity.UserRole;
+import com.example.ztna_server.enums.ResourceType;
 import com.example.ztna_server.enums.Role;
+import com.example.ztna_server.repository.ConnectorRepository;
 import com.example.ztna_server.repository.ResourceRepository;
 import com.example.ztna_server.repository.SystemRoleRepository;
 import com.example.ztna_server.repository.UserRepository;
@@ -26,45 +29,69 @@ public class DataInit implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final ResourceRepository resourceRepository;
 
+    private final ConnectorRepository connectorRepository;
+
     @Override
     public void run(String... args) {
+
+        Connector defaultConnector;
+        if (connectorRepository.count() == 0) {
+            defaultConnector = Connector.builder()
+                    .name("Local Agent Demo")
+                    .connectionString("toilaconnector1")
+                    .enabled(true)
+                    .build();
+            defaultConnector = connectorRepository.save(defaultConnector);
+            System.out.println("====== ĐÃ TỰ ĐỘNG THÊM CONNECTOR DEMO VÀO DATABASE ======");
+        } else {
+            defaultConnector = connectorRepository.findAll().get(0);
+        }
 
         if (resourceRepository.count() == 0) {
 
             // 1. Resource Nginx
             Resource web = Resource.builder()
                     .name("Demo Web Nginx")
+                    .type(ResourceType.WEB)
                     .description("Trang web demo chạy Nginx Alpine (Cổng 8082)")
-                    // Lưu ý: Nếu Spring Boot chạy trên máy host, dùng localhost.
-                    // Nếu Spring Boot nằm trong Docker, đổi thành host.docker.internal
-                    .backendUrl("http://localhost:8082")
+                    .host("localhost") // Đã tách host
+                    .port(8082)        // Đã tách port
                     .enabled(true)
+                    .connector(defaultConnector) // Gán Connector
                     .build();
 
             // 2. Resource SSH
             Resource ssh = Resource.builder()
                     .name("Demo SSH Server")
+                    .type(ResourceType.SSH)
                     .description("Máy chủ Linux giả lập SSH (Cổng 8083)")
-                    .backendUrl("http://localhost:8083")
+                    .host("localhost")
+                    .port(8083)
                     .enabled(true)
+                    .connector(defaultConnector) // Gán Connector
                     .build();
 
             // 3. Resource MySQL
             Resource mysql = Resource.builder()
                     .name("Demo Database MySQL")
+                    .type(ResourceType.MYSQL)
                     .description("Cơ sở dữ liệu MySQL 8.0 (Cổng 8081)")
-                    .backendUrl("http://localhost:8081")
+                    .host("localhost")
+                    .port(8081)
                     .enabled(true)
+                    .connector(defaultConnector) // Gán Connector
                     .build();
 
             // Lưu tất cả vào Database
             resourceRepository.saveAll(List.of(web, ssh, mysql));
 
             System.out.println("====== ĐÃ TỰ ĐỘNG THÊM 3 RESOURCE DEMO VÀO DATABASE ======");
-
         }
 
 
+        // ==========================================
+        // 3. KHỞI TẠO USER (Giữ nguyên logic cũ của bạn)
+        // ==========================================
         if (userRepository.count() > 0) {
             System.out.println("ℹ️  Users đã có, bỏ qua seed.");
             return;
@@ -72,7 +99,6 @@ public class DataInit implements CommandLineRunner {
 
         Instant now = Instant.now();
 
-        // 2. Tạo các User
         User adminUser = User.builder()
                 .username("admin")
                 .fullName("Quản trị viên")
@@ -84,7 +110,6 @@ public class DataInit implements CommandLineRunner {
                 .updatedAt(now)
                 .build();
 
-        // Thêm User giám sát (Supervisor)
         User supervisorUser = User.builder()
                 .username("supervisor")
                 .fullName("Người Giám Sát")
@@ -131,7 +156,7 @@ public class DataInit implements CommandLineRunner {
                 .fullName("Tài khoản bị khóa")
                 .password(passwordEncoder.encode("locked123"))
                 .email("locked@ztna.com")
-                .enabled(false) // Bị khóa
+                .enabled(false)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();

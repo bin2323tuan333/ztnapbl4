@@ -18,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
 @Slf4j
 @Component
 @Scope("prototype")
@@ -81,28 +83,32 @@ public class ResourceWsHandler extends SimpleChannelInboundHandler<WebSocketFram
         String resourceId = req.getAppId();
         String jwt = req.getJwt();
 
-        log.info("[App] OPEN_REQUEST appId={} jwtLen={}", resourceId, jwt == null ? 0 : jwt.length());
-        String uid = "admin1";
-//        String uid = jwtService.verifyAndGetUserId(jwt);
-//        if (uid == null) {
-//            log.warn("[App] JWT invalid hoặc hết hạn → reject");
-//            sendOpenFailed(ctx, OpenResFrame.STATUS_AUTH_FAILED,
-//                    "JWT invalid or expired");
-//            return;
-//        }
+        log.info("[App] OPEN_REQUEST appId={} jwt={}", resourceId, jwt);
 
-//        // 3. Set userId (lần đầu)
-//        if (this.userId == null) {
-//            this.userId = uid;
-//            userManager.add(uid, ctx.channel());
-//            log.info("[App] ✓ {} authenticated", uid);
-//        } else if (!this.userId.equals(uid)) {
-//            // Cùng WS nhưng JWT khác user → từ chối
-//            log.warn("[App] User mismatch: {} vs {}", this.userId, uid);
-//            sendOpenFailed(ctx, OpenResFrame.STATUS_AUTH_FAILED,
-//                    "User mismatch on same connection");
-//            return;
-//        }
+        String uid;
+        try {
+            if (jwtService.isTokenExpired(jwt)) {
+                log.warn("[App] JWT đã hết hạn");
+                sendOpenFailed(ctx, OpenResFrame.STATUS_AUTH_FAILED, "Phiên đăng nhập hết hạn");
+                return;
+            }
+            uid = jwtService.extractUserId(jwt).toString();
+        } catch (Exception e) {
+            log.warn("[App] JWT không hợp lệ: {}", e.getMessage());
+            sendOpenFailed(ctx, OpenResFrame.STATUS_AUTH_FAILED, "JWT không hợp lệ");
+            return;
+        }
+
+        if (this.userId == null) {
+            this.userId = uid;
+            userManager.register(uid, ctx.channel());
+            log.info("[App] ✓ {} authenticated", uid);
+        } else if (!this.userId.equals(uid)) {
+            sendOpenFailed(ctx, OpenResFrame.STATUS_AUTH_FAILED, "User mismatch");
+            return;
+        }
+
+
 
         Session session = sessionLifecycleService.openSession(uid, resourceId, ctx.channel());
         if (session == null) {
@@ -168,8 +174,7 @@ public class ResourceWsHandler extends SimpleChannelInboundHandler<WebSocketFram
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("[User] Lỗi: {}", ctx.channel().remoteAddress(), cause);
-        ctx.close();
+        log.error("[User] Lỗi xử lý frame (bỏ qua): {}", cause.getMessage());
     }
 
     private String extractToken(String uri) {

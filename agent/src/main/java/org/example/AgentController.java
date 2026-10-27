@@ -2,6 +2,7 @@ package org.example;
 
 import org.example.launcher.*;
 import org.example.listener.LocalServer;
+import org.example.protocol.frames.OpenResFrame;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,17 +13,32 @@ public class AgentController {
 
     public AgentController(AgentBootstrap bootstrap) {
         this.bootstrap = bootstrap;
-
-        launchers.put("web",   new WebLauncher());
+        launchers.put("web", new WebLauncher());
         launchers.put("mysql", new MysqlLauncher());
-        launchers.put("ssh",   new SshLauncher());
+        launchers.put("ssh", new SshLauncher());
     }
 
-    public int openApp(String resourceId, String appType, Map<String, String> params) throws Exception {
+    public synchronized int openApp(String resourceId, String appType, Map<String, String> params) throws Exception {
         String jwt = params.getOrDefault("jwt", "");
+
+        System.out.println("\n[AgentController] Đang xin phép Gateway mở app: " + resourceId);
+        bootstrap.getTunnelClient().sendOpenReq(resourceId, jwt);
+
+        OpenResFrame res = bootstrap.getRegistry().waitForOpenResponse();
+
+        if (res == null) {
+            throw new Exception("Gateway không phản hồi (Timeout)");
+        }
+        if (!res.isOk()) {
+            throw new Exception("Từ chối: " + res.getReason());
+        }
+
+        String streamId = res.getStreamId();
+        System.out.println("[AgentController] ✅ Được cấp streamId=" + streamId + ". Bắt đầu mở LocalServer.");
+
         LocalServer server = new LocalServer(
                 resourceId,
-                jwt,
+                streamId,
                 bootstrap.getBossGroup(),
                 bootstrap.getWorkerGroup(),
                 bootstrap.getTunnelClient(),
@@ -33,10 +49,7 @@ public class AgentController {
 
         AppLauncher launcher = launchers.get(appType.toLowerCase());
         if (launcher != null) {
-            System.out.println("[AgentController] " + launcher.getClass().getSimpleName() + " cho app " + resourceId + " | port=" + port);
             launcher.launch(port, params);
-        } else {
-            System.err.println("[AgentController] Không tìm thấy Launcher cho appType = " + appType);
         }
 
         return port;

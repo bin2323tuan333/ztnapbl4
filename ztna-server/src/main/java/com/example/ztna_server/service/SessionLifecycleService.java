@@ -11,12 +11,12 @@ import com.example.ztna_server.routes.SessionManager;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Queue;
 import java.util.UUID;
 
 @Slf4j
@@ -48,7 +48,6 @@ public class SessionLifecycleService {
             return null;
         }
 
-        // Sinh streamId dạng String UUID
         String streamId = UUID.randomUUID().toString();
 
         Session session = Session.builder()
@@ -64,7 +63,6 @@ public class SessionLifecycleService {
 
         sessionManager.add(streamId, session);
 
-        // Gửi lệnh CONNECT xuống Agent (Connector)
         ConnectFrame cf = new ConnectFrame(streamId, appId);
         connCh.writeAndFlush(new BinaryWebSocketFrame(
                 Unpooled.wrappedBuffer(cf.encode())
@@ -79,9 +77,8 @@ public class SessionLifecycleService {
 
     public void sessionDisconnect(String streamId, String reason) {
         Session session = sessionManager.remove(streamId);
-        if (session == null) {
-            return;
-        }
+        if (session == null) return;
+
         session.setCloseReason(reason);
         log.info("Close session: {}", reason);
         session.setState(Session.State.CLOSING);
@@ -95,11 +92,12 @@ public class SessionLifecycleService {
         if (userCh == null || !userCh.isActive()) return;
 
         CloseFrame cf = new CloseFrame();
-        cf.setStreamId(session.getStreamId()); // Đã đổi thành String
+        cf.setStreamId(session.getStreamId());
 
+        // LƯU Ý: KHÔNG dùng addListener(ChannelFutureListener.CLOSE) ở đây
         userCh.writeAndFlush(new BinaryWebSocketFrame(
                 Unpooled.wrappedBuffer(cf.encode())
-        )).addListener(ChannelFutureListener.CLOSE);
+        ));
     }
 
     private void notifyConnector(Session session) {
@@ -107,50 +105,16 @@ public class SessionLifecycleService {
         if (connCh == null || !connCh.isActive()) return;
 
         CloseFrame cf = new CloseFrame();
-        cf.setStreamId(session.getStreamId()); // Đã đổi thành String
+        cf.setStreamId(session.getStreamId());
 
         connCh.writeAndFlush(new BinaryWebSocketFrame(
                 Unpooled.wrappedBuffer(cf.encode())
         ));
     }
 
-    public void forwardToConnector(ByteBuf buf) {
-        byte[] data = new byte[buf.readableBytes()];
-        buf.readBytes(data);
-
-        DataFrame frame = new DataFrame();
-        frame.decode(data);
-
-        String streamId = frame.getStreamId(); // String
-        byte[] payload = frame.getData();
-
-        if (payload == null || payload.length == 0) {
-            log.debug("[Lifecycle] DATA rỗng cho stream={}", streamId);
-            return;
-        }
-
-        Session session = sessionManager.get(streamId);
-        if (session == null || !(session.getState() == Session.State.READY)) {
-            log.warn("[Lifecycle] Stream {} không tồn tại hoặc chưa READY", streamId);
-            return;
-        }
-
-        Channel conChannel = session.getWsChannel();
-        if (conChannel == null || !conChannel.isActive()) {
-            sessionDisconnect(streamId, "CONNECTOR CONNECT NULL");
-            log.info("Channel null");
-            return;
-        }
-
-        conChannel.writeAndFlush(
-                new BinaryWebSocketFrame(
-                        Unpooled.wrappedBuffer(frame.encode())
-                )
-        );
-
-        log.debug("[Lifecycle] Server → App: stream={}, {} bytes", streamId, payload.length);
-    }
-
+    // ==========================================
+    // HÀM BỊ THIẾU GÂY LỖI COMPILE
+    // ==========================================
     public void forwardToClient(ByteBuf buf) {
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
@@ -158,13 +122,10 @@ public class SessionLifecycleService {
         DataFrame frame = new DataFrame();
         frame.decode(data);
 
-        String streamId = frame.getStreamId(); // SỬA: Đổi từ int sang String
-        byte[] payload = frame.getData();      // SỬA: Đổi từ getPayload() sang getData()
+        String streamId = frame.getStreamId();
+        byte[] payload = frame.getData();
 
-        if (payload == null || payload.length == 0) {
-            log.debug("[Lifecycle] DATA rỗng cho stream={}", streamId);
-            return;
-        }
+        if (payload == null || payload.length == 0) return;
 
         Session session = sessionManager.get(streamId);
         if (session == null || !(session.getState() == Session.State.READY)) {
@@ -174,21 +135,72 @@ public class SessionLifecycleService {
 
         Channel clientCh = session.getUserChannel();
         if (clientCh == null || !clientCh.isActive()) {
-            sessionDisconnect(streamId, "USER CONNECT NULL");
+            sessionDisconnect(streamId, "USER NULL");
             return;
         }
 
         clientCh.writeAndFlush(new BinaryWebSocketFrame(
                 Unpooled.wrappedBuffer(frame.encode())
-        ));
+        )).addListener(future -> {
+            if (future.isSuccess()) {
+                log.info("[Lifecycle] ✅ Connector → Client: stream={}, {} bytes", streamId, payload.length);
+            } else {
+                log.error("[Lifecycle] ❌ Gửi thất bại tới Client: stream={}", streamId);
+            }
+        });
+    }
 
-        log.debug("[Lifecycle] Server → Client: stream={}, {} bytes", streamId, payload.length);
+    public void forwardToConnector(ByteBuf buf) {
+        byte[] data = new byte[buf.readableBytes()];
+        buf.readBytes(data);
+
+        DataFrame frame = new DataFrame();
+        frame.decode(data);
+
+        String streamId = frame.getStreamId();
+        byte[] payload = frame.getData();
+
+        log.info("[Lifecycle] Nhận DATA từ Agent: stream={}, len={}", streamId, payload == null ? 0 : payload.length);
+
+        if (payload == null || payload.length == 0) return;
+
+        Session session = sessionManager.get(streamId);
+        if (session == null) {
+            log.warn("[Lifecycle] ❌ Stream {} không tồn tại.", streamId);
+            return;
+        }
+
+        if (session.getState() == Session.State.OPENING) {
+            session.getPendingDataQueue().add(payload);
+            log.info("[Lifecycle] ⏳ Đã đệm DATA cho stream {} (Chờ CONNECTOR kết nối xong)", streamId);
+            return;
+        }
+
+        if (session.getState() != Session.State.READY) {
+            log.warn("[Lifecycle] ❌ Stream {} bị hủy vì state = {}", streamId, session.getState());
+            return;
+        }
+
+        Channel conChannel = session.getWsChannel();
+        if (conChannel == null || !conChannel.isActive()) {
+            sessionDisconnect(streamId, "CONNECTOR NULL");
+            return;
+        }
+
+        conChannel.writeAndFlush(new BinaryWebSocketFrame(
+                Unpooled.wrappedBuffer(frame.encode())
+        )).addListener(future -> {
+            if (future.isSuccess()) {
+                log.info("[Lifecycle] ✅ Server → Connector: stream={}, {} bytes", streamId, payload.length);
+            } else {
+                log.error("[Lifecycle] ❌ Gửi thất bại tới Connector: stream={}", streamId);
+            }
+        });
     }
 
     public void onClientDisconnect(String userId) {
         List<Session> list = sessionManager.getByUser(userId);
         log.info("[Lifecycle] Client {} disconnected, closing {} sessions", userId, list.size());
-
         for (Session item : list) {
             sessionDisconnect(item.getStreamId(), "CLIENT DISCONNECT");
         }
@@ -197,7 +209,6 @@ public class SessionLifecycleService {
     public void onConnectorDisconnect(String connectorId) {
         List<Session> list = sessionManager.getByConnector(connectorId);
         log.info("[Lifecycle] Connector {} disconnected, closing {} sessions",connectorId, list.size());
-
         for (Session item : list) {
             sessionDisconnect(item.getStreamId(), "CONNECTOR DISCONNECT");
         }
@@ -212,11 +223,24 @@ public class SessionLifecycleService {
 
         session.setState(Session.State.READY);
         session.touch();
-
         log.info("[Lifecycle] Stream {} READY", streamId);
+
+        Queue<byte[]> pending = session.getPendingDataQueue();
+        if (!pending.isEmpty()) {
+            log.info("[Lifecycle] Đang xả {} gói DATA đang đệm cho stream {}", pending.size(), streamId);
+            Channel conChannel = session.getWsChannel();
+            while (!pending.isEmpty()) {
+                byte[] payload = pending.poll();
+                if (conChannel != null && conChannel.isActive()) {
+                    DataFrame dataFrame = new DataFrame(streamId, payload);
+                    conChannel.writeAndFlush(new BinaryWebSocketFrame(
+                            Unpooled.wrappedBuffer(dataFrame.encode())
+                    ));
+                }
+            }
+        }
     }
 
-    // SỬA: Đổi tham số int thành String
     public void onConnectAckFailed(String streamId, String reason) {
         sessionDisconnect(streamId, "CONNECT_FAILED: " + reason);
     }

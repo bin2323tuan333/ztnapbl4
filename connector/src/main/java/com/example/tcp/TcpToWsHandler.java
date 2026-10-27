@@ -35,20 +35,24 @@ public class TcpToWsHandler extends SimpleChannelInboundHandler<ByteBuf> {
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         if (!msg.isReadable()) return;
 
+        int len = msg.readableBytes();
+
         byte[] payload = new byte[msg.readableBytes()];
         msg.readBytes(payload);
 
         DataFrame dataFrame = new DataFrame(streamId, payload);
 
         frameSender.accept(dataFrame.encode());
-
+        log.info("[TcpToWsHandler] ← Nginx trả về {} bytes cho stream={}", len, streamId);
         log.debug("[stream={}] App → WS: {} bytes", streamId, payload.length);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        TcpManager tcpManager = TcpManager.getInstance();
-        tcpManager.remove(streamId);
+        TcpManager.getInstance().remove(streamId);
+        log.info("[TcpToWsHandler] [stream={}] Nginx đã đóng kết nối TCP", streamId);
+//        TcpManager tcpManager = TcpManager.getInstance();
+//        tcpManager.remove(streamId);
     }
 
     @Override

@@ -15,7 +15,7 @@ public class ConnectionRegister {
     // connectorId → Channel
     private final Map<String, Channel> channels = new ConcurrentHashMap<>();
 
-    // connectorId → lastSeen (heartbeat)
+    // connectorId → lastSeen
     private final Map<String, Long> lastSeen = new ConcurrentHashMap<>();
 
 

@@ -1,20 +1,21 @@
 package org.example.stream;
 
 import io.netty.channel.Channel;
+import org.example.protocol.frames.OpenResFrame;
 
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.*;
 
 public class StreamRegistry {
+    // Map lưu channel đang hoạt động (streamId -> Channel)
     private final Map<String, Channel> streams = new ConcurrentHashMap<>();
-    private final Queue<Channel> channelQueue = new ConcurrentLinkedQueue<>();
+
+    // Hàng đợi hứng kết quả OpenRes từ Gateway trả về
+    private final BlockingQueue<OpenResFrame> openResQueue = new LinkedBlockingQueue<>();
 
     public void register(String streamId, Channel channel) {
         streams.put(streamId, channel);
-        System.out.println("[Registry] active+ streamId=" + streamId
-                + " (total=" + streams.size() + ")");
     }
 
     public Channel get(String streamId) {
@@ -22,38 +23,20 @@ public class StreamRegistry {
     }
 
     public Channel remove(String streamId) {
-        Channel ch = streams.remove(streamId);
-        System.out.println("[Registry] active- streamId=" + streamId
-                + " (remaining=" + streams.size() + ")");
-        return ch;
+        return streams.remove(streamId);
     }
 
-    public Channel pop() {
-        Channel ch = channelQueue.poll();
-        System.out.println("[Registry] pending- (remaining=" + channelQueue.size() + ")");
-        return ch;
+    public void putOpenResponse(OpenResFrame frame) {
+        openResQueue.offer(frame);
     }
 
-    public void push(Channel channel) {
-        channelQueue.add(channel);
-        System.out.println("[Registry] pending+ (total=" + channelQueue.size() + ")");
-    }
-
-    public boolean removeQueued(Channel channel) {
-        boolean removed = channelQueue.remove(channel);
-        if (removed) {
-            System.out.println("[Registry] pending- (removed dead, remaining="
-                    + channelQueue.size() + ")");
-        }
-        return removed;
+    public OpenResFrame waitForOpenResponse() throws InterruptedException {
+        // Chờ tối đa 10 giây
+        return openResQueue.poll(10, TimeUnit.SECONDS);
     }
 
     public void closeAll() {
-        System.out.println("[Registry] closeAll: active=" + streams.size()
-                + " pending=" + channelQueue.size());
         streams.values().forEach(Channel::close);
-        channelQueue.forEach(Channel::close);
         streams.clear();
-        channelQueue.clear();
     }
 }

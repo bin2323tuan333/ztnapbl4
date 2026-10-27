@@ -14,19 +14,16 @@ public class LocalServerInitializer extends ChannelInitializer<SocketChannel> {
     private String streamId;
     private String jwt;
 
-    public LocalServerInitializer(
-            String resourceId,
-            TunnelClient tunnelClient, StreamRegistry streamRegistry,
-            String jwt) {
+    public LocalServerInitializer(String resourceId, String streamId, TunnelClient tunnelClient, StreamRegistry streamRegistry) {
         this.resourceId = resourceId;
+        this.streamId = streamId;
         this.tunnelClient = tunnelClient;
         this.streamRegistry = streamRegistry;
-        this.jwt = jwt;
     }
 
     @Override
     protected void initChannel(SocketChannel ch) {
         ch.config().setOption(ChannelOption.TCP_NODELAY, true);
-        ch.pipeline().addLast(new LocalHandler(resourceId, tunnelClient, streamRegistry, jwt));
+        ch.pipeline().addLast(new LocalHandler(resourceId, streamId, tunnelClient, streamRegistry));
     }
 }

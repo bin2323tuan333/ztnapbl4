@@ -68,7 +68,13 @@ public class TunnelClient {
 
     public void send(byte[] data) {
         if (channel != null && channel.isActive()) {
+            // THÊM DÒNG LOG NÀY
+            System.out.println("[TunnelClient] Đang gửi " + data.length + " bytes lên Gateway...");
+
             channel.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(data)));
+        } else {
+            // THÊM DÒNG LOG NÀY
+            System.err.println("[TunnelClient] ❌ Mất kết nối, không thể gửi data!");
         }
     }
 

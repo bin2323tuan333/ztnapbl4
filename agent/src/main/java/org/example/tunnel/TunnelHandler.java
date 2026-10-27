@@ -6,23 +6,15 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.*;
-import org.example.listener.LocalHandler;
 import org.example.protocol.FrameType;
 import org.example.protocol.frames.*;
 import org.example.stream.StreamRegistry;
 
 public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
-
     private final StreamRegistry streamRegistry;
 
     public TunnelHandler(StreamRegistry streamRegistry) {
         this.streamRegistry = streamRegistry;
-    }
-
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        System.out.println("[Tunnel] Đã kết nối thành công tới Gateway!");
-        super.channelActive(ctx);
     }
 
     @Override
@@ -31,13 +23,7 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
             ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()));
             return;
         }
-        if (frame instanceof CloseWebSocketFrame) {
-            ctx.close();
-            return;
-        }
-        if (!(frame instanceof BinaryWebSocketFrame bin)) {
-            return;
-        }
+        if (!(frame instanceof BinaryWebSocketFrame bin)) return;
 
         ByteBuf buf = bin.content();
         if (!buf.isReadable()) return;
@@ -52,8 +38,6 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
                 default -> System.err.println("[Tunnel] Frame type lạ: 0x" + String.format("%02X", type));
             }
         } catch (Exception e) {
-            System.err.println("[Tunnel] Lỗi parse frame type=0x"
-                    + String.format("%02X", type) + ": " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -64,28 +48,10 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         buf.readBytes(data);
         resFrame.decode(data);
 
-        String streamId = resFrame.getStreamId();
-        System.out.println("[Tunnel] ← Nhận OPEN_RESPONSE: streamId=" + streamId + " (status=" + resFrame.getStatus() + ")");
+        System.out.println("[Tunnel] ← Nhận OPEN_RESPONSE: streamId=" + resFrame.getStreamId() + " (status=" + resFrame.getStatus() + ")");
 
-        Channel channel = streamRegistry.pop();
-        if (channel == null || !channel.isActive()) {
-            System.err.println("[Tunnel] ❌ Không có channel nào đang chờ (hoặc đã chết)");
-            return;
-        }
-
-        LocalHandler handler = channel.pipeline().get(LocalHandler.class);
-        if (handler == null) {
-            System.err.println("[Tunnel] ❌ Không tìm thấy LocalHandler trong pipeline");
-            channel.close();
-            return;
-        }
-
-        if (resFrame.isOk()) {
-            streamRegistry.register(streamId, channel);
-            handler.onOpenResponse(streamId, null);
-        } else {
-            handler.onOpenResponse(null, resFrame.getReason());
-        }
+        // Ném vào Queue để HTTP Thread đang chờ lấy ra
+        streamRegistry.putOpenResponse(resFrame);
     }
 
     private void handleData(ByteBuf buf) {
@@ -94,13 +60,13 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         buf.readBytes(data);
         dataFrame.decode(data);
 
-        String streamId = dataFrame.getStreamId();
-        Channel channel = streamRegistry.get(streamId);
-
+        Channel channel = streamRegistry.get(dataFrame.getStreamId());
         if (channel != null && channel.isActive()) {
+            System.out.println("[Tunnel] → Gateway trả về " + dataFrame.getData().length + " bytes (đẩy xuống Chrome)");
             channel.writeAndFlush(Unpooled.wrappedBuffer(dataFrame.getData()));
         } else {
-            System.err.println("[Tunnel] ❌ Nhận DATA cho streamId=" + streamId + " nhưng channel không tồn tại!");
+            // THÊM DÒNG LOG NÀY
+            System.err.println("[Tunnel] ❌ Không tìm thấy Channel cho streamId=" + dataFrame.getStreamId());
         }
     }
 
@@ -110,26 +76,12 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         buf.readBytes(data);
         closeFrame.decode(data);
 
-        String streamId = closeFrame.getStreamId();
-
-        Channel channel = streamRegistry.remove(streamId);
-
-        if (channel != null) {
-            System.out.println("[Tunnel] ← Nhận CLOSE cho streamId=" + streamId + ", đóng channel.");
-            channel.close();
-        }
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) {
-        System.err.println("[Tunnel] Mất kết nối — đóng tất cả stream");
-        streamRegistry.closeAll();
+        Channel channel = streamRegistry.remove(closeFrame.getStreamId());
+        if (channel != null) channel.close();
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        System.err.println("[Tunnel] Lỗi đường truyền: " + cause.getMessage());
-        cause.printStackTrace();
         ctx.close();
     }
 }

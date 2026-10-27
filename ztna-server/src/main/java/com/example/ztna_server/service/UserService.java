@@ -30,7 +30,6 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
 
-    // ───────────── Dùng nội bộ (AuthService...) ─────────────
 
     public UserInfo getUserByUsername(String username) {
         User user = userRepository.findByUsername(username)
@@ -54,7 +53,6 @@ public class UserService {
         userRepository.save(user);
     }
 
-    // ───────────── Quản lý user (admin) ─────────────
 
     public List<UserResponse> getUsers() {
         return userRepository.findAll().stream()
@@ -100,7 +98,7 @@ public class UserService {
         }
 
         if (request.getRole() != null && request.getRole() != user.getRole()) {
-            ensureNotSelf(id); // admin không tự hạ quyền của chính mình
+            ensureNotSelf(id);
             user.setRole(request.getRole());
         }
 
@@ -118,7 +116,6 @@ public class UserService {
             user.setUpdatedAt(Instant.now());
             userRepository.save(user);
         }
-        // Thu hồi refresh token: user bị khóa không xin được access token mới
         refreshTokenRepository.findByUserId(id).ifPresent(refreshTokenRepository::delete);
     }
 

@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -27,6 +30,9 @@ public class Session {
 
     private long openedAt;
     private long lastActive;
+
+    @Builder.Default
+    private Queue<byte[]> pendingDataQueue = new ConcurrentLinkedQueue<>();
 
     public enum State {
         INIT,

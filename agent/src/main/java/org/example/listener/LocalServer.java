@@ -21,7 +21,7 @@ public class LocalServer {
     private String jwt;
 
     public LocalServer(String resourceId,
-                       String jwt,
+                       String streamId,
                        EventLoopGroup bossGroup,
                        EventLoopGroup workerGroup,
                        TunnelClient tunnelClient,
@@ -30,7 +30,7 @@ public class LocalServer {
         this.bossGroup = bossGroup;
         this.workerGroup = workerGroup;
         this.tunnelClient = tunnelClient;
-        this.jwt = jwt;
+        this.streamId = streamId;
         this.streamRegistry = streamRegistry;
     }
 
@@ -38,7 +38,7 @@ public class LocalServer {
         ServerBootstrap b = new ServerBootstrap();
         b.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .childHandler(new LocalServerInitializer(resourceId, tunnelClient, streamRegistry, jwt));
+                .childHandler(new LocalServerInitializer(resourceId, streamId, tunnelClient, streamRegistry));
 
 
         channel = b.bind("127.0.0.1", 0).sync().channel();

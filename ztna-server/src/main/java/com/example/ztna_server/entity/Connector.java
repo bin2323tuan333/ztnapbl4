@@ -1,5 +1,6 @@
 package com.example.ztna_server.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,8 +27,11 @@ public class Connector {
     @Builder.Default
     private boolean enabled = true;
 
-    @Column(name = "connection_string_or_config", nullable = false, columnDefinition = "TEXT")
-    private String connectionStringOrConfig;
+    @Column(name = "connection_string", nullable = false, columnDefinition = "TEXT")
+    private String connectionString;
+
+    @OneToMany(mappedBy = "connector", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Resource> resources;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

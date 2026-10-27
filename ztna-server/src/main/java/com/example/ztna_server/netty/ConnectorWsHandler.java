@@ -1,19 +1,15 @@
 package com.example.ztna_server.netty;
 
-import com.example.ztna_server.core.ServiceRegistry;
 import com.example.ztna_server.dto.App;
+import com.example.ztna_server.entity.Connector;
 import com.example.ztna_server.protocol.*;
 import com.example.ztna_server.protocol.frames.*;
-import com.example.ztna_server.routes.ConnectionRegister;
+import com.example.ztna_server.repository.ConnectorRepository;
 import com.example.ztna_server.routes.RoutingTable;
-import com.example.ztna_server.routes.Session;
-import com.example.ztna_server.routes.SessionManager;
 import com.example.ztna_server.service.ConnectionLifecycleService;
 import com.example.ztna_server.service.SessionLifecycleService;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.*;
@@ -21,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
@@ -34,6 +29,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
     private final RoutingTable routingTable;
     private final ConnectionLifecycleService connectionLifecycleService;
     private final SessionLifecycleService sessionLifecycleService;
+    private final ConnectorRepository connectorRepository;
 
     private volatile String connectorId;
     private volatile boolean registered = false;
@@ -86,8 +82,16 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
         RoutingReqFrame frame = new RoutingReqFrame();
         frame.decode(data);
 
-        String connectorId = frame.getConnectorId();
-        this.connectorId = connectorId;
+        String connectString = frame.getConnectorId();
+
+        Connector connector = connectorRepository.findByConnectionString(connectString)
+                .orElse(null);
+
+        if (connector == null) {
+            // send error res;
+        }
+
+        this.connectorId = connector.getId().toString();
 
         connectionLifecycleService.register(connectorId, ctx.channel());
         this.registered = true;

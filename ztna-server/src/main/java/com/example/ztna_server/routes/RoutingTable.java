@@ -13,10 +13,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 public class RoutingTable {
-//    appId → AppRoute{connectorId, App}
+//    resourceId → AppRoute{connectorId, App}
     private final Map<String, AppRoute> routes = new ConcurrentHashMap<>();
 
-//    connectorId → Set<appId>
+//    connectorId → Set<resourceId>
     private final Map<String, Set<String>> connectorIndex = new ConcurrentHashMap<>();
 
 
@@ -43,6 +43,12 @@ public class RoutingTable {
         }
 
         log.info("[ROUTING] Loaded {} apps for connector {}", appList.size(), connectorId);
+    }
+
+    public void clearAll() {
+        routes.clear();
+        connectorIndex.clear();
+        log.info("[ROUTING] Cleared all routes");
     }
 
     public void clearConnector(String connectorId) {

@@ -12,6 +12,7 @@ import java.util.UUID;
 public class ResourceResponse {
     private UUID id;
     private String name;
+    private String type;
     private String description;
     private Boolean enabled;
 }
