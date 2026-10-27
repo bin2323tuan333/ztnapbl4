@@ -7,7 +7,7 @@ interface DataTableProps<T> {
     emptyMessage?: string;
 }
 
-function DataTable<T extends { id: number }>({ columns, data, emptyMessage = 'Không có dữ liệu' }: DataTableProps<T>) {
+function DataTable<T extends { id: number | string }>({ columns, data, emptyMessage = 'Không có dữ liệu' }: DataTableProps<T>) {
     return (
         <div className="dt-container">
             <div className="dt-wrapper">

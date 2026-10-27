@@ -36,7 +36,9 @@ const Login = () => {
 
         } catch (err: any) {
             console.error(err.message);
-            setError("Không kết nối được server");
+            if (err.status === 401) setError("Sai tên đăng nhập hoặc mật khẩu");
+            else if (err.status === 403) setError("Tài khoản đã bị khóa");
+            else setError("Không kết nối được server");
         } finally {
             setLoading(false);
         }
