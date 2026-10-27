@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "audit_logs")
@@ -15,29 +16,33 @@ import java.time.Instant;
 @NoArgsConstructor
 @Builder
 public class AuditLog {
+
     @Id
     @GeneratedValue
-    private java.util.UUID id;
+    private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "actor_id", nullable = false)
-    private User actor;
+    // Denormalize để không mất thông tin khi user bị xóa
+    @Column(name = "actor_id", nullable = false)
+    private UUID actorId;
+
+    @Column(name = "actor_username", nullable = false, length = 100)
+    private String actorUsername;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "action", length = 10, nullable = false)
+    @Column(name = "action", length = 30, nullable = false)
     private Action action;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "target_type", length = 20, nullable = false)
+    @Column(name = "target_type", length = 30, nullable = false)
     private TargetType targetType;
 
-    @Column(name = "target_id", length = 36, nullable = false)
-    private String targetId;
+    @Column(name = "target_id", length = 36)
+    private String targetId;                 // có thể null (ví dụ LOGIN_FAILED)
 
-    @Column(name = "details", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "details", columnDefinition = "TEXT")
     private String details;
 
-    @Column(name = "ip_address", nullable = false)
+    @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
     @Column(name = "created_at", nullable = false)
