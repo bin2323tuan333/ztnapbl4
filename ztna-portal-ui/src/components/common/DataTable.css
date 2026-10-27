@@ -1,0 +1,51 @@
+.dt-container {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.dt-wrapper {
+    overflow-x: auto;
+}
+
+.dt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.dt-th {
+    background: #f9fafb;
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #6b7280;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+}
+
+.dt-td {
+    padding: 12px 16px;
+    color: #111827;
+    border-bottom: 1px solid #f3f4f6;
+    white-space: nowrap;
+}
+
+.dt-row:hover {
+    background: #f9fafb;
+}
+
+.dt-row:last-child .dt-td {
+    border-bottom: none;
+}
+
+.dt-empty {
+    padding: 40px 16px;
+    text-align: center;
+    color: #9ca3af;
+    font-style: italic;
+}

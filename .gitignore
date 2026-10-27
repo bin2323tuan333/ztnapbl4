@@ -1,0 +1,41 @@
+# ============ Maven ============
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# ============ IDE ============
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# ============ OS ============
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============ Database ============
+*.db
+*.sqlite
+data/
+
+# ============ Log ============
+*.log
+logs/
+
+# ============ Build output ============
+build/
+out/
+bin/
+
+# ============ Environment ============
+.env
+.env.local
+*.local
+
+# ============ Node (nếu có) ============
+node_modules/

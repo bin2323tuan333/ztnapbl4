@@ -1,0 +1,479 @@
+/* ============================================================
+   APP.CSS — GLOBAL BASE
+   Toàn bộ biến theme + reset + base component
+   KHÔNG khai báo style riêng cho page nào ở đây.
+   ============================================================ */
+
+/* ---------- 1. CSS VARIABLES ---------- */
+:root {
+    /* Brand */
+    --color-primary: #9333ea;
+    --color-primary-hover: #7e22ce;
+    --color-primary-light: #f3e8ff;
+    --color-primary-softer: #faf5ff;
+    --color-primary-ring: rgba(147, 51, 234, 0.18);
+
+    /* Surface */
+    --color-bg: #f9fafb;
+    --color-surface: #ffffff;
+
+    /* Border */
+    --color-border: #e5e7eb;
+    --color-border-light: #f3f4f6;
+
+    /* Text */
+    --color-text: #111827;
+    --color-text-muted: #6b7280;
+    --color-text-light: #9ca3af;
+    --color-text-inverse: #ffffff;
+
+    /* Semantic */
+    --color-success-bg: #dcfce7;
+    --color-success-text: #166534;
+    --color-danger-bg: #fee2e2;
+    --color-danger-text: #991b1b;
+    --color-warning-bg: #fef3c7;
+    --color-warning-text: #92400e;
+    --color-info-bg: #ede9fe;
+    --color-info-text: #6d28d9;
+    --color-muted-bg: #f3f4f6;
+    --color-muted-text: #6b7280;
+
+    /* Radius */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 14px;
+    --radius-2xl: 16px;
+    --radius-pill: 999px;
+
+    /* Shadow */
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-card-hover: 0 10px 25px -8px var(--color-primary-ring);
+    --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.08),
+                       0 1px 3px rgba(0, 0, 0, 0.05);
+    --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+    /* Spacing */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* Transition */
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.25s ease;
+
+    /* Layout */
+    --sidebar-width: 240px;
+    --header-height: 60px;
+}
+
+/* ---------- 2. RESET ---------- */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-text);
+    background: var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    background: none;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+ul,
+ol {
+    list-style: none;
+}
+
+img,
+svg {
+    display: block;
+    max-width: 100%;
+}
+
+/* ---------- 3. SCROLLBAR ---------- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-light);
+}
+
+/* ---------- 4. FOCUS ---------- */
+:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* ============================================================
+   BASE COMPONENTS
+   Prefix quy ước:
+     .btn-*    → button
+     .badge-*  → badge / status pill
+     .input-*  → input / select / textarea
+     .card-*   → card wrapper
+     .tbl-*    → table
+   ============================================================ */
+
+/* ---------- BUTTON ---------- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    height: 36px;
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    font-size: 14px;
+    transition: background var(--transition-fast),
+                color var(--transition-fast),
+                border-color var(--transition-fast),
+                box-shadow var(--transition-fast);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+}
+
+.btn-ghost:hover:not(:disabled) {
+    background: var(--color-border-light);
+}
+
+.btn-danger {
+    background: var(--color-danger-bg);
+    color: var(--color-danger-text);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #fecaca;
+}
+
+.btn-sm {
+    height: 30px;
+    padding: 0 var(--space-3);
+    font-size: 13px;
+}
+
+.btn-lg {
+    height: 44px;
+    padding: 0 var(--space-6);
+    font-size: 15px;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: var(--radius-md);
+}
+
+/* ---------- BADGE ---------- */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    height: 22px;
+    padding: 0 10px;
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.badge-success {
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+}
+
+.badge-danger {
+    background: var(--color-danger-bg);
+    color: var(--color-danger-text);
+}
+
+.badge-warning {
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+}
+
+.badge-info {
+    background: var(--color-info-bg);
+    color: var(--color-info-text);
+}
+
+.badge-muted {
+    background: var(--color-muted-bg);
+    color: var(--color-muted-text);
+}
+
+/* ---------- INPUT ---------- */
+.input {
+    width: 100%;
+    height: 36px;
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    transition: border-color var(--transition-fast),
+                box-shadow var(--transition-fast);
+}
+
+.input::placeholder {
+    color: var(--color-text-light);
+}
+
+.input:hover {
+    border-color: var(--color-text-light);
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-ring);
+}
+
+.input:disabled {
+    background: var(--color-border-light);
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+}
+
+textarea.input {
+    height: auto;
+    min-height: 80px;
+    padding: var(--space-3);
+    resize: vertical;
+    line-height: 1.5;
+}
+
+/* ---------- CARD ---------- */
+.card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-card);
+    transition: border-color var(--transition-base),
+                box-shadow var(--transition-base);
+}
+
+.card-hover:hover {
+    border-color: var(--color-primary-light);
+    box-shadow: var(--shadow-card-hover);
+}
+
+/* ---------- TABLE ---------- */
+.tbl-wrap {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.tbl thead th {
+    height: 42px;
+    padding: 0 var(--space-4);
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.tbl tbody td {
+    height: 52px;
+    padding: 0 var(--space-4);
+    border-bottom: 1px solid var(--color-border-light);
+    color: var(--color-text);
+    vertical-align: middle;
+}
+
+.tbl tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.tbl tbody tr:hover td {
+    background: var(--color-primary-softer);
+}
+
+/* ---------- EMPTY STATE ---------- */
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-8) var(--space-6);
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.empty svg {
+    color: var(--color-text-light);
+}
+
+.empty-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.empty-desc {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    max-width: 320px;
+}
+
+/* ---------- LOADING SKELETON ---------- */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--color-border-light) 25%,
+        var(--color-border) 37%,
+        var(--color-border-light) 63%
+    );
+    background-size: 400% 100%;
+    border-radius: var(--radius-sm);
+    animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+@keyframes skeleton-shimmer {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+
+/* ---------- DIVIDER ---------- */
+.divider {
+    height: 1px;
+    background: var(--color-border-light);
+    margin: var(--space-4) 0;
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+.text-muted { color: var(--color-text-muted); }
+.text-light { color: var(--color-text-light); }
+.text-primary { color: var(--color-primary); }
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-1 { gap: var(--space-1); }
+.gap-2 { gap: var(--space-2); }
+.gap-3 { gap: var(--space-3); }
+.gap-4 { gap: var(--space-4); }
+
+.mt-2 { margin-top: var(--space-2); }
+.mt-4 { margin-top: var(--space-4); }
+.mb-4 { margin-bottom: var(--space-4); }
+
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.anim-fade-in {
+    animation: fade-in var(--transition-base);
+}
+
+.anim-slide-down {
+    animation: slide-down var(--transition-base);
+}
