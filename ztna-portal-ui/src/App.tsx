@@ -20,7 +20,7 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
 
                 {/* Đưa Portal vào trong ProtectedRoute, và chỉ cho phép USER */}
-                <Route element={<ProtectedRoute allowedRoles={['USER']} />}>
+                <Route element={<ProtectedRoute allowedRoles={['USER', 'SUPERVISOR']} />}>
                     <Route element={<UserLayout />}>
                         <Route path="/portal" element={<Portal />} />
                     </Route>
