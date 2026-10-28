@@ -6,6 +6,8 @@ import com.example.ztna_server.protocol.*;
 import com.example.ztna_server.protocol.frames.*;
 import com.example.ztna_server.repository.ConnectorRepository;
 import com.example.ztna_server.routes.RoutingTable;
+import com.example.ztna_server.routes.Session;
+import com.example.ztna_server.routes.SessionManager;
 import com.example.ztna_server.service.ConnectionLifecycleService;
 import com.example.ztna_server.service.SessionLifecycleService;
 import io.netty.buffer.ByteBuf;
@@ -30,6 +32,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
     private final ConnectionLifecycleService connectionLifecycleService;
     private final SessionLifecycleService sessionLifecycleService;
     private final ConnectorRepository connectorRepository;
+    private final SessionManager sessionManager;
 
     private volatile String connectorId;
     private volatile boolean registered = false;
@@ -62,8 +65,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
         try {
             switch (type) {
                 case FrameType.ROUTING_REQUEST -> handleRoutingReq(ctx, data);
-                case FrameType.HEARTBEAT -> handleHeartbeat(ctx, data);
-                case FrameType.CONNECT_ACK -> handleConnectAck(ctx, data);
+                case FrameType.CONNECT_ACK -> handleConnectAck(data);
                 case FrameType.DATA        -> handleData(data);
                 case FrameType.CLOSE       -> handleClose(ctx, data);
                 default -> log.warn("[Connector] Unknown frame: 0x{}", String.format("%02X", type));
@@ -88,7 +90,6 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
                 .orElse(null);
 
         if (connector == null || !connector.isEnabled()) {
-            // Connector lạ hoặc đã bị tắt → không cho đăng ký, đóng kết nối
             log.warn("[Connector] Từ chối connector không hợp lệ: {}", connectString);
             ctx.close();
             return;
@@ -113,34 +114,37 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
         ));
     }
 
-    private void handleHeartbeat(ChannelHandlerContext ctx, ByteBuf buf) {
-        if (buf.readableBytes() < 8) return;
-        long clientTs = buf.readLong();
 
-        connectionLifecycleService.markAlive(connectorId);
+    private void handleConnectAck(ByteBuf buf) {
+        byte[] bytes = new byte[buf.readableBytes()];
+        buf.readBytes(bytes);
+        ConnectAckFrame ack = new ConnectAckFrame();
+        ack.decode(bytes);
+        String streamId = ack.getStreamId();
 
-        HeartBeatAckFrame ack = new HeartBeatAckFrame(clientTs);
-        ctx.writeAndFlush(new BinaryWebSocketFrame(
-                Unpooled.wrappedBuffer(ack.encode())
-        ));
+        Session session = sessionManager.get(streamId);
+        if (session == null) return;
 
-        log.debug("[Connector] Heartbeat from {}", connectorId);
-    }
+        if (ack.isOk()) {
+            session.setState(Session.State.READY);
 
-    private  void handleConnectAck(ChannelHandlerContext ctx, ByteBuf buf) {
-        byte[] data = new byte[buf.readableBytes()];
-        buf.readBytes(data);
+            String reqId = sessionManager.getReqIdByStreamId(streamId);
 
-        ConnectAckFrame frame = new ConnectAckFrame();
-        frame.decode(data);
+            if (reqId != null && session.getUserChannel() != null) {
+                ResourceResFrame res = ResourceResFrame.ok(reqId, streamId);
 
-        String streamId = frame.getStreamId();
-        byte status = frame.getStatus();
+                session.getUserChannel().writeAndFlush(
+                        new BinaryWebSocketFrame(Unpooled.wrappedBuffer(res.encode()))
+                );
+                log.info("[Gateway] Đã gửi RESOURCE_RESPONSE cấp streamId={} cho reqId={}", streamId, reqId);
+            }
 
-        if (status == 0x00) {
-            sessionLifecycleService.onConnectAckOk(streamId);
         } else {
-            sessionLifecycleService.onConnectAckFailed(streamId, frame.getReason());
+            String reqId = sessionManager.getReqIdByStreamId(streamId);
+            ResourceResFrame res = ResourceResFrame.failed(reqId, ResourceResFrame.STATUS_APP_NOT_FOUND, "Connector connect failed");
+            session.getUserChannel().writeAndFlush(
+                    new BinaryWebSocketFrame(Unpooled.wrappedBuffer(res.encode()))
+            );
         }
     }
 

@@ -99,7 +99,7 @@ public class ConnectorClient {
 
                         p.addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS));
                         p.addLast(new HttpClientCodec());
-                        p.addLast(new HttpObjectAggregator(65536));
+                        p.addLast(new HttpObjectAggregator(MAX_FRAME_SIZE));
 
                         DefaultHttpHeaders headers = new DefaultHttpHeaders();
                         headers.add(
