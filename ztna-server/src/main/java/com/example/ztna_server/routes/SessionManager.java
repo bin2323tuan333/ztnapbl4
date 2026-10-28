@@ -20,13 +20,22 @@ public class SessionManager {
     // userId -> StreamIds
     private final Map<String, Set<String>> byUser = new ConcurrentHashMap<>();
 
-    // Sinh streamId ngẫu nhiên bằng UUID
+    // reqId -> Session (Dùng để tra cứu khi có reqId)
+    private final Map<String, Session> reqSession = new ConcurrentHashMap<>();
+    // streamId -> reqId (Dùng để dọn dẹp khi xóa Session)
+    private final Map<String, String> streamToReq = new ConcurrentHashMap<>();
+
     public String nextStreamId() {
         return UUID.randomUUID().toString();
     }
 
-    public void add(String streamId, Session session) {
+    public void add(String reqId, String streamId, Session session) {
         sessions.put(streamId, session);
+
+        if (reqId != null && !reqId.isBlank()) {
+            reqSession.put(reqId, session);
+            streamToReq.put(streamId, reqId);
+        }
 
         Set<String> set = byConnector.get(session.getConnectorId());
         if (set == null) {
@@ -49,6 +58,11 @@ public class SessionManager {
             return null;
         }
 
+        String reqId = streamToReq.remove(streamId);
+        if (reqId != null) {
+            reqSession.remove(reqId);
+        }
+
         removeFromIndex(byConnector, s.getConnectorId(), streamId);
         removeFromIndex(byUser, s.getUserId(), streamId);
         return s;
@@ -65,6 +79,14 @@ public class SessionManager {
 
     public Session get(String streamId) {
         return sessions.get(streamId);
+    }
+
+    public Session getByReqId(String reqId) {
+        return reqSession.get(reqId);
+    }
+
+    public String getReqIdByStreamId(String streamId) {
+        return streamToReq.get(streamId);
     }
 
     public List<Session> getByConnector(String connectorId) {

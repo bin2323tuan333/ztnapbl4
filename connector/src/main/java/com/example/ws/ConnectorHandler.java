@@ -46,11 +46,8 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
                 if (ctx.channel().isActive()) {
                     RoutingReqFrame req = new RoutingReqFrame(config.getToken());
                     ctx.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(req.encode())));
-                    log.info("[Connector] Đã gửi RoutingReq định kỳ cho {}", config.getToken());
                 }
-            }, 0, 30, TimeUnit.SECONDS);
-
-            log.info("[Connector] Đã gửi RoutingReq cho {}", config.getToken());
+            }, 0, 10, TimeUnit.SECONDS);
         }
         super.userEventTriggered(ctx, evt);
     }

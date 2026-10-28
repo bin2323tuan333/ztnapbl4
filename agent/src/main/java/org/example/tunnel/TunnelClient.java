@@ -8,32 +8,32 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import org.example.AgentConfig;
-import org.example.protocol.Frame;
+import org.example.Factory;
 import org.example.protocol.frames.CloseFrame;
 import org.example.protocol.frames.DataFrame;
-import org.example.protocol.frames.OpenReqFrame;
-import org.example.stream.StreamRegistry;
+import org.example.protocol.frames.HttpAccessFrame;
+import org.example.protocol.frames.ResourceAccessFrame;
 
 import java.net.URI;
 
 public class TunnelClient {
-    private final AgentConfig agentConfig;
-    private final StreamRegistry streamRegistry;
-    private final EventLoopGroup tunnelGroup;
-
+    private final AgentConfig agentConfig = Factory.agentConfig;
+    private final EventLoopGroup tunnelGroup = Factory.tunnelGroup;
     private volatile Channel channel;
 
-    public TunnelClient(AgentConfig agentConfig, EventLoopGroup tunnelGroup, StreamRegistry streamRegistry) {
-        this.agentConfig = agentConfig;
-        this.tunnelGroup = tunnelGroup;
-        this.streamRegistry = streamRegistry;
+    public TunnelClient() {
+        try {
+            this.channel = connect().sync().channel();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     public ChannelFuture connect() {
         Bootstrap b = new Bootstrap();
         b.group(tunnelGroup)
                 .channel(NioSocketChannel.class)
-                .handler(new TunnelChannelInitializer(agentConfig, streamRegistry));
+                .handler(new TunnelChannelInitializer());
 
         URI uri = URI.create(agentConfig.getGatewayUrl());
         String host = uri.getHost();
@@ -54,8 +54,12 @@ public class TunnelClient {
     }
 
 
-    public void sendOpenReq(String resourceId, String jwt) {
-        send(new OpenReqFrame(resourceId, jwt).encode());
+    public void sendHttpAccess(String reqId, String resourceId, String jwt) {
+        send(new HttpAccessFrame(reqId, resourceId, jwt).encode());
+    }
+
+    public void sendResourceAccess(String reqId, String resourceId) {
+        send(new ResourceAccessFrame(reqId, resourceId).encode());
     }
 
     public void sendStreamData(String streamId, byte[] data) {
@@ -68,13 +72,10 @@ public class TunnelClient {
 
     public void send(byte[] data) {
         if (channel != null && channel.isActive()) {
-            // THÊM DÒNG LOG NÀY
             System.out.println("[TunnelClient] Đang gửi " + data.length + " bytes lên Gateway...");
-
             channel.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(data)));
         } else {
-            // THÊM DÒNG LOG NÀY
-            System.err.println("[TunnelClient] ❌ Mất kết nối, không thể gửi data!");
+            System.err.println("[TunnelClient] Mất kết nối, không thể gửi data!");
         }
     }
 

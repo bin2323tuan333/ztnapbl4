@@ -31,9 +31,6 @@ public class Session {
     private long openedAt;
     private long lastActive;
 
-    @Builder.Default
-    private Queue<byte[]> pendingDataQueue = new ConcurrentLinkedQueue<>();
-
     public enum State {
         INIT,
         OPENING,

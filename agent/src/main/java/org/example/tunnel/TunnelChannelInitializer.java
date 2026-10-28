@@ -9,18 +9,14 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.example.AgentConfig;
-import org.example.stream.StreamRegistry;
+import org.example.Factory;
+import org.example.cache.StreamRegistry;
 
 import java.net.URI;
 
 public class TunnelChannelInitializer extends ChannelInitializer<SocketChannel> {
-    private final AgentConfig agentConfig;
-    private final StreamRegistry streamRegistry;
-
-    public TunnelChannelInitializer(AgentConfig agentConfig, StreamRegistry streamRegistry) {
-        this.agentConfig = agentConfig;
-        this.streamRegistry = streamRegistry;
-    }
+    private final AgentConfig agentConfig = Factory.agentConfig;
+    private final StreamRegistry streamRegistry = Factory.streamRegistry;
 
     @Override
     protected void initChannel(SocketChannel ch) throws Exception {
@@ -29,7 +25,6 @@ public class TunnelChannelInitializer extends ChannelInitializer<SocketChannel> 
         ch.pipeline()
                 .addLast(new HttpClientCodec())
                 .addLast(new HttpObjectAggregator(65536))
-
                 .addLast(new WebSocketClientProtocolHandler(
                         uri, WebSocketVersion.V13,
                         null,
@@ -37,6 +32,6 @@ public class TunnelChannelInitializer extends ChannelInitializer<SocketChannel> 
                         new DefaultHttpHeaders(),
                         65536))
                 .addLast(new WebSocketFrameAggregator(65536))
-                .addLast(new TunnelHandler(streamRegistry));
+                .addLast(new TunnelHandler());
     }
 }

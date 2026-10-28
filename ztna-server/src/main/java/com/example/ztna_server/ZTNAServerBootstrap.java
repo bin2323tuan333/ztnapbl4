@@ -1,6 +1,5 @@
 package com.example.ztna_server;
 
-import com.example.ztna_server.dto.App;
 import com.example.ztna_server.netty.ConnectorWsHandler;
 import com.example.ztna_server.netty.ResourceWsHandler;
 import com.example.ztna_server.routes.RoutingTable;
@@ -23,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -34,11 +32,8 @@ public class ZTNAServerBootstrap {
     private static final int APP_PORT = 9443;
     private static final int MAX_FRAME_SIZE = 1024 * 1024;
 
-    private static final String DEMO_CONNECTOR_ID = "conn_01";
-
     private final ObjectProvider<ConnectorWsHandler> connectorProvider;
     private final ObjectProvider<ResourceWsHandler> appProvider;
-    private final RoutingTable routingTable;
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -49,7 +44,6 @@ public class ZTNAServerBootstrap {
 
     @PostConstruct
     public void start() throws InterruptedException {
-        hardCodeApps();
         bossGroup = new NioEventLoopGroup(1);
         workerGroup = new NioEventLoopGroup();
 
@@ -63,37 +57,6 @@ public class ZTNAServerBootstrap {
         log.info("═".repeat(60));
     }
 
-    private void hardCodeApps() {
-        List<App> apps = List.of(
-                App.builder()
-                        .id("app_web_01")
-                        .name("Demo Web")
-                        .host("localhost")
-                        .port(8082)
-                        .build(),
-                App.builder()
-                        .id("app_ssh_01")
-                        .name("Demo SSH")
-                        .host("localhost")
-                        .port(8083)
-                        .build(),
-                App.builder()
-                        .id("app_mysql_01")
-                        .name("Demo MySQL")
-                        .host("localhost")
-                        .port(8081)
-                        .build()
-        );
-
-        routingTable.loadRouting(DEMO_CONNECTOR_ID, apps);
-
-        log.info("═".repeat(60));
-        log.info("[BOOTSTRAP] Hard-coded {} apps for connector {}",
-                apps.size(), DEMO_CONNECTOR_ID);
-        apps.forEach(a -> log.info("  • {} ({}) → {}:{}",
-                a.getId(), a.getName(), a.getHost(), a.getPort()));
-        log.info("═".repeat(60));
-    }
 
     private void startAppServer() throws InterruptedException {
         ServerBootstrap b = new ServerBootstrap();

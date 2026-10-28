@@ -3,27 +3,38 @@ package org.example.listener;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.example.stream.StreamRegistry;
+import org.example.Factory;
+import org.example.cache.ClientOpenRegistry;
+import org.example.cache.StreamRegistry;
 import org.example.tunnel.TunnelClient;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 public class LocalHandler extends SimpleChannelInboundHandler<ByteBuf> {
     private final String resourceId;
-    private final String streamId;
-    private final TunnelClient tunnelClient;
-    private final StreamRegistry streamRegistry;
+    private final String reqId;
+    private final TunnelClient tunnelClient = Factory.tunnelClient;
+    private final StreamRegistry streamRegistry = Factory.streamRegistry;
+    private final ClientOpenRegistry clientOpenRegistry = Factory.clientOpenRegistry;
 
-    public LocalHandler(String resourceId, String streamId, TunnelClient tunnelClient, StreamRegistry streamRegistry) {
+    private String streamId;
+    private ChannelHandlerContext ctx;
+    private final List<ByteBuf> pendingBuf = new ArrayList<>();
+
+    public LocalHandler(String resourceId) {
         this.resourceId = resourceId;
-        this.streamId = streamId;
-        this.tunnelClient = tunnelClient;
-        this.streamRegistry = streamRegistry;
+        this.reqId = UUID.randomUUID().toString();
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        System.out.println("\n[LocalHandler] ✓ " + resourceId + " đã kết nối vào port nội bộ!");
-
-        streamRegistry.register(streamId, ctx.channel());
+        this.ctx = ctx;
+        System.out.println("\n[LocalHandler] đã kết nối vào port nội bộ!");
+        System.out.println("[LocalHandler] Chuẩn bị gửi ResourceAccess với appId: " + resourceId);
+        clientOpenRegistry.put(reqId, ctx.channel());
+        tunnelClient.sendResourceAccess(reqId, resourceId);
 
         ctx.channel().config().setAutoRead(true);
         ctx.read();
@@ -31,19 +42,45 @@ public class LocalHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) {
-        int len = buf.readableBytes();
-        if (len == 0) return;
+        if (!buf.isReadable()) return;
 
-        byte[] data = new byte[len];
+        if (streamId == null) {
+            System.out.println("[LocalHandler] ⏳ Đệm " + buf.readableBytes() + " bytes (chờ streamId)");
+            pendingBuf.add(buf.retain());
+            return;
+        }
+
+        byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
-        System.out.println("[LocalHandler] ← Chrome gửi " + len + " bytes (sẽ đẩy lên Gateway)");
         tunnelClient.sendStreamData(streamId, data);
+    }
+
+    public void onAccessSuccess(String streamId) {
+        this.streamId = streamId;
+        System.out.println("[LocalHandler] ✅ Nhận streamId=" + streamId + " → Đăng ký và xả đệm.");
+        streamRegistry.register(streamId, ctx.channel());
+        for (ByteBuf buf : pendingBuf) {
+            try {
+                byte[] data = new byte[buf.readableBytes()];
+                buf.readBytes(data);
+                tunnelClient.sendStreamData(streamId, data);
+            } finally {
+                buf.release();
+            }
+        }
+        pendingBuf.clear();
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
         System.out.println("[LocalHandler] Client local đóng kết nối.");
-        streamRegistry.remove(streamId);
-//        tunnelClient.sendStreamClose(streamId);
+        if (streamId != null) {
+            Factory.streamRegistry.remove(streamId);
+            Factory.tunnelClient.sendStreamClose(streamId);
+        }
+    }
+
+    public String getReqId() {
+        return reqId;
     }
 }

@@ -1,61 +1,51 @@
 package org.example.listener;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import org.example.stream.StreamRegistry;
+import org.example.Factory;
+import org.example.cache.StreamRegistry;
 import org.example.tunnel.TunnelClient;
 
 import java.net.InetSocketAddress;
 
 public class LocalServer {
-    private final String resourceId;
-    private final EventLoopGroup bossGroup;
-    private final EventLoopGroup workerGroup;
-    private final TunnelClient tunnelClient;
-    private final StreamRegistry streamRegistry;
+    private final EventLoopGroup bossGroup = Factory.bossGroup;
+    private final EventLoopGroup workerGroup = Factory.workerGroup;
+    private final TunnelClient tunnelClient = Factory.tunnelClient;
+    private final StreamRegistry streamRegistry = Factory.streamRegistry;
 
     private Channel channel;
-    private String streamId;
-    private String jwt;
+    private String resourceId;
 
-    public LocalServer(String resourceId,
-                       String streamId,
-                       EventLoopGroup bossGroup,
-                       EventLoopGroup workerGroup,
-                       TunnelClient tunnelClient,
-                       StreamRegistry streamRegistry) {
+    public LocalServer(String resourceId) {
         this.resourceId = resourceId;
-        this.bossGroup = bossGroup;
-        this.workerGroup = workerGroup;
-        this.tunnelClient = tunnelClient;
-        this.streamId = streamId;
-        this.streamRegistry = streamRegistry;
     }
 
-    public int start() throws Exception {
+    public int start()  {
         ServerBootstrap b = new ServerBootstrap();
         b.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .childHandler(new LocalServerInitializer(resourceId, streamId, tunnelClient, streamRegistry));
+                .childHandler(new LocalServerInitializer(resourceId));
 
-
-        channel = b.bind("127.0.0.1", 0).sync().channel();
-        int port = ((InetSocketAddress) channel.localAddress()).getPort();
-        System.out.println("[LocalServer:" + resourceId + "] listen 127.0.0.1:" + port);
-        return port;
+        try {
+            channel = b.bind("127.0.0.1", 0).sync().channel();
+            int port = ((InetSocketAddress) channel.localAddress()).getPort();
+            return port;
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+        return 0;
     }
+
 
     public Channel getChannel() {
         return channel;
     }
 
-    public String getStreamId() {
-        return streamId;
-    }
-
-    public void setStreamId(String streamId) {
-        this.streamId = streamId;
+    public String getResourceId() {
+        return resourceId;
     }
 }
