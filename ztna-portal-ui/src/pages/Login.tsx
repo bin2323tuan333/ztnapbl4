@@ -29,6 +29,7 @@ const Login = () => {
             })
 
             localStorage.setItem('accessToken', data.accessToken);
+            localStorage.setItem('username', username);
 
             const me = getCurrentUser();
             if (me?.role === 'ADMIN') navigate("/app/home");
