@@ -22,6 +22,7 @@ const Header: React.FC = () => {
 
     const handleLogout = () => {
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('username');
         navigate('/');
     };
 

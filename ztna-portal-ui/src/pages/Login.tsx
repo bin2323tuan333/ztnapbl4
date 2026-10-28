@@ -29,10 +29,11 @@ const Login = () => {
             })
 
             localStorage.setItem('accessToken', data.accessToken);
+            localStorage.setItem('username', username);
 
             const me = getCurrentUser();
             if (me?.role === 'ADMIN') navigate("/app/home");
-            else if (me?.role === 'USER') navigate("/portal");
+            else navigate("/portal"); // USER và SUPERVISOR đều vào Portal
 
         } catch (err: any) {
             console.error(err.message);

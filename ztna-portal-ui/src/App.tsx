@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import AdminLayout from './layouts/AdminLayout';
 import Home from './pages/admin/Home';
 import Users from './pages/admin/Users';
+import Roles from './pages/admin/Roles';
 
 import Portal from './pages/user/Portal';
 import Overview from './pages/Overview';
@@ -20,7 +21,7 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
 
                 {/* Đưa Portal vào trong ProtectedRoute, và chỉ cho phép USER */}
-                <Route element={<ProtectedRoute allowedRoles={['USER']} />}>
+                <Route element={<ProtectedRoute allowedRoles={['USER', 'SUPERVISOR']} />}>
                     <Route element={<UserLayout />}>
                         <Route path="/portal" element={<Portal />} />
                     </Route>
@@ -32,6 +33,7 @@ const App = () => {
                     <Route element={<AdminLayout />}>
                         <Route path="home" element={<Home />} />
                         <Route path="users" element={<Users />} />
+                        <Route path="roles" element={<Roles />} />
                         {/* ... các route con khác ... */}
                     </Route>
                 </Route>
