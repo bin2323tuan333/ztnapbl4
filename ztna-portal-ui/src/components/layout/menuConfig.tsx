@@ -44,9 +44,8 @@ export const ADMIN_MENU: MenuItem[] = [
             { label: 'Người dùng', path: '/app/users' },
             { label: 'Quản trị viên', path: '/app/users?role=ADMIN' },
             { label: 'Người giám sát', path: '/app/users?role=SUPERVISOR' },
-            { label: 'Người dùng đích', path: '/app/users?role=TARGET_USER' },
+            { label: 'Người dùng thường', path: '/app/users?role=USER' },
             { label: 'Vai trò', path: '/app/roles' },
-            { label: 'Chức vụ', path: '/app/positions' },
         ],
     },
 
