@@ -1,0 +1,130 @@
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 50%, #e0e7ff 100%);
+    padding: 24px;
+}
+
+.login-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 56px 48px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 20px 60px rgba(147, 51, 234, 0.15);
+    text-align: center;
+}
+
+.login-logo {
+    width: 80px;
+    height: 80px;
+    background: #9333ea;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    margin: 0 auto 24px;
+}
+
+.login-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 8px;
+}
+
+.login-subtitle {
+    font-size: 15px;
+    color: #6b7280;
+    margin: 0 0 40px;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.login-error {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: left;
+}
+
+.login-field {
+    text-align: left;
+}
+
+.login-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.login-input-icon {
+    position: absolute;
+    left: 16px;
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+.login-input {
+    width: 100%;
+    padding: 16px 16px 16px 48px; 
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 15px;
+    color: #111827;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: #f9fafb;
+}
+
+.login-input:focus {
+    border-color: #9333ea;
+    box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
+    background: #ffffff;
+}
+
+.login-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px;
+    background: #9333ea;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 12px;
+}
+
+.login-btn:hover {
+    background: #7e22ce;
+}
+
+.login-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.login-hint {
+    font-size: 13px;
+    color: #9ca3af;
+    margin: 32px 0 0;
+}
+
+.login-hint strong {
+    color: #6b7280;
+}

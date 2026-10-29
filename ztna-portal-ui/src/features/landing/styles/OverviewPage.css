@@ -1,0 +1,183 @@
+.ov-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.ov-hero {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 80px 20px;
+    background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+    text-align: center;
+}
+
+.ov-hero-content {
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ov-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    background-color: #f3e8ff; /* Màu tím nhạt */
+    color: #9333ea; /* Màu tím đậm */
+    border-radius: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 25px -5px rgba(147, 51, 234, 0.3);
+}
+
+.ov-title {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 12px 0;
+    letter-spacing: -0.02em;
+}
+
+.ov-tagline {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #9333ea;
+    margin: 0 0 24px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.ov-description {
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: #4b5563;
+    margin: 0 0 40px 0;
+    max-width: 600px;
+}
+
+/* Nút bấm */
+.ov-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.ov-btn-primary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #9333ea;
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(147, 51, 234, 0.4);
+}
+
+.ov-btn-primary:hover {
+    background-color: #7e22ce;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px -2px rgba(147, 51, 234, 0.5);
+}
+
+.ov-btn-ghost {
+    background-color: transparent;
+    color: #374151;
+    border: 2px solid #d1d5db;
+    padding: 14px 28px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ov-btn-ghost:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.ov-features {
+    padding: 80px 20px;
+    background-color: #ffffff;
+}
+
+.ov-features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.ov-feature-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 32px;
+    text-align: left;
+    transition: all 0.3s ease;
+}
+
+.ov-feature-card:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+    border-color: #d8b4fe;
+    transform: translateY(-4px);
+}
+
+.ov-feature-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    background-color: #f3e8ff;
+    color: #9333ea;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.ov-feature-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 12px 0;
+}
+
+.ov-feature-desc {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #6b7280;
+    margin: 0;
+}
+
+@media (max-width: 992px) {
+    .ov-features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .ov-title {
+        font-size: 2.25rem;
+    }
+    
+    .ov-actions {
+        flex-direction: column;
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .ov-features-grid {
+        grid-template-columns: 1fr;
+    }
+}

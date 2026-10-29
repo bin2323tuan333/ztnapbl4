@@ -1,0 +1,171 @@
+/* =========================================
+   1. LAYOUT CHUNG
+   ========================================= */
+.dashboard-container {
+    padding: 24px;
+    max-width: 1400px;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 auto;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.dashboard-error-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    font-size: 14px;
+}
+
+.dashboard-error-banner button {
+    background: #b91c1c;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+/* =========================================
+   2. BỐ CỤC GRID CHÍNH (2 CỘT)
+   ========================================= */
+.dashboard-layout-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* Cột trái rộng gấp đôi cột phải */
+    gap: 24px;
+    align-items: stretch; /* Ép 2 cột cao bằng nhau */
+}
+
+/* Cột Trái (Chứa KPI và Biểu đồ cột) */
+.dashboard-left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%; /* Kéo dài cột để ăn theo Grid */
+}
+
+/* Cột Phải (Chứa Đồng hồ và Lịch) */
+.dashboard-right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+}
+
+/* =========================================
+   3. KHU VỰC THẺ KPI (Lưới 2x2)
+   ========================================= */
+.dashboard-kpi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    flex-shrink: 0; /* Không cho cụm KPI bị bóp nhỏ lại */
+}
+
+.dashboard-stat-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.dashboard-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.dashboard-stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.dashboard-stat-label {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+/* =========================================
+   4. CÁC KHỐI PANEL (Biểu đồ & Lịch)
+   ========================================= */
+.dashboard-panel {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    height: 100%; /* Giãn hết chiều cao cho phép */
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* =========================================
+   5. RESPONSIVE
+   ========================================= */
+@media (max-width: 1024px) {
+    /* Trên màn hình vừa (Tablet), đưa về 1 cột */
+    .dashboard-layout-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Lúc này không cần kéo dài nữa, để tự nhiên */
+    .dashboard-left-col, .dashboard-right-col {
+        height: auto; 
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .dashboard-container {
+        padding: 16px;
+    }
+}

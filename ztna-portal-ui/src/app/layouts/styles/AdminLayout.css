@@ -1,0 +1,51 @@
+.ml-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.ml-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden; 
+}
+
+/* SỬA TẠI ĐÂY: Thêm display: flex, đổi overflow-y thành hidden */
+.ml-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Bắt buộc để ép nội dung con co lại đúng kích thước */
+    overflow: hidden; /* Tắt thanh cuộn ở đây, nhường quyền cuộn cho trang con */
+    background: #f9fafb;
+}
+
+/* SỬA TẠI ĐÂY: Ép thẻ inner phải vừa khít */
+.ml-content-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    padding: 24px;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.ml-footer {
+    padding: 16px 24px;
+    text-align: center;
+    font-size: 12px;
+    color: #9ca3af;
+    border-top: 1px solid #e5e7eb;
+    background: #ffffff;
+}
+
+@media (max-width: 768px) {
+    .ml-content-inner {
+        padding: 16px;
+    }
+}
