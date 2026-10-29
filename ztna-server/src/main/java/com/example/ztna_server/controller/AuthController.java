@@ -13,16 +13,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
 
-     /**
-     POST /api/auth/login
-     Body: { "username": "admin", "password": "123" }
-     Response: { "token": "eyJhbGc..." }
-     **/
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody LoginRequest request,
@@ -31,9 +26,8 @@ public class AuthController {
 
         Cookie refreshTokenCookie = new Cookie("refresh_token", authResponse.getRefreshToken());
         refreshTokenCookie.setHttpOnly(true);
-        // refreshTokenCookie.setSecure(true);
-        refreshTokenCookie.setSecure(true);
-        refreshTokenCookie.setPath("/auth");
+//        refreshTokenCookie.setSecure(true);
+        refreshTokenCookie.setPath("/api/v1/auth");
         refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60);
         httpResponse.addCookie(refreshTokenCookie);
 

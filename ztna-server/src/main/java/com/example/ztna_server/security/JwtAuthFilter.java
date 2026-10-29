@@ -31,7 +31,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        // Không có token: cho đi tiếp, SecurityConfig sẽ chặn nếu API cần đăng nhập
         if (header == null || !header.startsWith("Bearer ")) {
             chain.doFilter(request, response);
             return;
@@ -43,17 +42,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String userId = claims.getSubject();
             String role = claims.get("role", String.class);
 
-            // Refresh token không có claim "role", nên không được dùng thay access token
             if (role != null) {
                 var auth = new UsernamePasswordAuthenticationToken(
-                        userId,                                         // principal = userId (UUID dạng chuỗi)
+                        userId,
                         null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role)) // ROLE_ADMIN, ROLE_USER...
+                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
                 );
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
         } catch (JwtException | IllegalArgumentException e) {
-            // Token sai hoặc hết hạn: không xác thực, request sẽ nhận 401
             SecurityContextHolder.clearContext();
         }
 

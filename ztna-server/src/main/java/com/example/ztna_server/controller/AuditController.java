@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 
 @RestController
-@RequestMapping("/api/admin/audit-logs")
+@RequestMapping("/api/v1/admin/audit-logs")
 @RequiredArgsConstructor
 public class AuditController {
 

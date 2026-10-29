@@ -18,7 +18,7 @@ import java.util.UUID;
  * Phân quyền truy cập ứng dụng — chỉ ADMIN gọi được (SecurityConfig chặn /admin/**).
  */
 @RestController
-@RequestMapping("/admin/permissions")
+@RequestMapping("api/v1/admin/permissions")
 @RequiredArgsConstructor
 public class PermissionController {
 

@@ -21,7 +21,6 @@ public class AuditLog {
     @GeneratedValue
     private UUID id;
 
-    // Denormalize để không mất thông tin khi user bị xóa
     @Column(name = "actor_id", nullable = false)
     private UUID actorId;
 
@@ -37,7 +36,7 @@ public class AuditLog {
     private TargetType targetType;
 
     @Column(name = "target_id", length = 36)
-    private String targetId;                 // có thể null (ví dụ LOGIN_FAILED)
+    private String targetId;
 
     @Column(name = "details", columnDefinition = "TEXT")
     private String details;

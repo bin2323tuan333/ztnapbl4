@@ -3,8 +3,10 @@ package com.example.ztna_server.exception;
 import com.example.ztna_server.dto.response.ErrorResponse;
 import com.example.ztna_server.enums.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -47,5 +49,11 @@ public class GlobalExceptionHandler {
         ErrorCode ec = ErrorCode.INTERNAL_ERROR;
         return ResponseEntity.status(ec.getStatus())
                 .body(new ErrorResponse(ec.getCode(), ec.getMessage()));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<?> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse("ACCESS_DENIED", "Bạn không có quyền truy cập"));
     }
 }

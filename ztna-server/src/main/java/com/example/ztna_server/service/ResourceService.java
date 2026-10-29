@@ -25,30 +25,16 @@ public class ResourceService {
     private final UserRepository userRepository;
     private final PermissionService permissionService;
 
-    /**
-     * Danh sách app cho người đang đăng nhập (Least Privilege):
-     * - ADMIN thấy tất cả để quản trị
-     * - Người khác chỉ thấy app mình được cấp quyền (riêng hoặc qua role)
-     * - Tài khoản bị khóa không thấy gì, kể cả khi access token chưa hết hạn
-     */
     public List<ResourceResponse> getResources() {
-        UUID userId = SecurityUtils.currentUserId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
-
-        if (!Boolean.TRUE.equals(user.getEnabled())) {
-            throw new AppException(ErrorCode.ACCOUNT_LOCKED);
-        }
-
-        List<Resource> resources;
-        if (user.getRole() == Role.ADMIN) {
-            resources = resourceRepository.findAll();
-        } else {
-            List<UUID> allowedIds = permissionService.getAccessibleResourceIds(userId);
-            resources = resourceRepository.findAllById(allowedIds);
-        }
+        List<Resource> resources  = resourceRepository.findAll();
 
         return resources.stream()
+                .map(resourceMapper::toResourceResponse)
+                .toList();
+    }
+
+    public List<ResourceResponse> getResourcesByUserId(UUID userId) {
+        return resourceRepository.findAllByUserId(userId).stream()
                 .map(resourceMapper::toResourceResponse)
                 .toList();
     }
