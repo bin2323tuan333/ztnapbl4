@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.UUID;
@@ -18,8 +19,9 @@ import java.util.UUID;
  * Phân quyền truy cập ứng dụng — chỉ ADMIN gọi được (SecurityConfig chặn /admin/**).
  */
 @RestController
-@RequestMapping("api/v1/admin/permissions")
+@RequestMapping("/api/v1/admin/permissions")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class PermissionController {
 
     private final PermissionService permissionService;
