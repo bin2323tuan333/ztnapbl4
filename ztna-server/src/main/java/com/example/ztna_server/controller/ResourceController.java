@@ -20,7 +20,7 @@ public class ResourceController {
     private final ResourceService resourceService;
 
     @GetMapping("/myresources")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'SUPERVISOR')")
     public ResponseEntity<List<ResourceResponse>> getMyResources(@AuthenticationPrincipal String userIdStr) {
         if (userIdStr == null) {
             return ResponseEntity.status(401).build();
