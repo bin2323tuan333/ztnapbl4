@@ -30,7 +30,10 @@ export const ADMIN_MENU: MenuItem[] = [
         icon: <Users size={20} />,
         children: [
             { label: 'Người dùng', path: '/users' },
-            { label: 'Chức vụ', path: '/positions' },
+            { label: 'Quản trị viên', path: '/users?role=ADMIN' },
+            { label: 'Người giám sát', path: '/users?role=SUPERVISOR' },
+            { label: 'Người dùng thường', path: '/users?role=USER' },
+            { label: 'Vai trò', path: '/roles' },
         ],
     },
 

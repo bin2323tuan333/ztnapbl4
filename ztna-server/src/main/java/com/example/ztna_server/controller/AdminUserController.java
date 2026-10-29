@@ -57,6 +57,20 @@ public class AdminUserController {
         return ResponseEntity.ok(userService.updateUser(id, request));
     }
 
+    // PATCH /{id}/block — khóa tài khoản (thu hồi luôn refresh token)
+    @PatchMapping("/{id}/block")
+    public ResponseEntity<Void> blockUser(@PathVariable UUID id) {
+        userService.blockUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // PATCH /{id}/unblock — mở khóa tài khoản
+    @PatchMapping("/{id}/unblock")
+    public ResponseEntity<Void> unblockUser(@PathVariable UUID id) {
+        userService.unblockUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // PUT /{id}/password — admin đặt lại mật khẩu
     @PutMapping("/{id}/password")
     public ResponseEntity<Void> resetPassword(@PathVariable UUID id,

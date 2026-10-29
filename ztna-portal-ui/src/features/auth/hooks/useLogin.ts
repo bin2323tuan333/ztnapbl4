@@ -25,6 +25,7 @@ export const useLogin = () => {
 
             localStorage.removeItem('accessToken');
             localStorage.setItem('accessToken', data.accessToken);
+            localStorage.setItem('username', username); // để Header hiện đúng tên
 
             const me = getCurrentUser();
 

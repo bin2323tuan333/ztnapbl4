@@ -1,0 +1,53 @@
+/* Khung dùng chung cho các trang quản trị dạng bảng (identity, authorization, ...)
+   Mọi class có tiền tố ap- để không đụng CSS của feature khác. */
+
+.ap-container { padding: 32px; max-width: 1400px; margin: 0 auto; background: #fff; min-height: 100vh; }
+.ap-header { margin-bottom: 24px; }
+.ap-title { font-size: 24px; font-weight: 600; color: #111827; margin: 0; }
+.ap-subtitle { margin: 6px 0 0; font-size: 14px; color: #6b7280; }
+
+.ap-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+.ap-toolbar .search-bar { width: 320px; max-width: 100%; }
+
+.ap-btn { padding: 10px 16px; background: #111827; color: #fff; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center;
+    justify-content: center; gap: 8px; transition: background .2s; }
+.ap-btn:hover { background: #374151; }
+.ap-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+
+.ap-error { color: #dc2626; font-size: 14px; margin-bottom: 12px; }
+
+.ap-table-wrapper { border: 1px solid #e5e7eb; border-radius: 8px; overflow-x: auto; background: #fff; }
+.ap-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 800px; }
+.ap-table th { background: #f9fafb; padding: 14px 20px; font-size: 13px; font-weight: 600; color: #4b5563;
+    border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+.ap-table td { padding: 14px 20px; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #111827; vertical-align: middle; }
+.ap-table tr:last-child td { border-bottom: none; }
+.ap-table tbody tr:hover td { background: #f9fafb; }
+.ap-empty { text-align: center; padding: 40px !important; color: #6b7280 !important; }
+.ap-muted { color: #6b7280; }
+
+.ap-actions { display: flex; gap: 4px; justify-content: flex-end; }
+.ap-icon-btn { background: transparent; border: none; padding: 6px; border-radius: 6px; cursor: pointer;
+    color: #6b7280; display: flex; align-items: center; justify-content: center; transition: all .2s; }
+.ap-icon-btn:hover { background: #f3f4f6; color: #111827; }
+.ap-icon-btn.danger:hover { color: #ef4444; background: #fee2e2; }
+
+.ap-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.ap-badge.red { background: #fee2e2; color: #991b1b; }
+.ap-badge.yellow { background: #fef3c7; color: #92400e; }
+.ap-badge.blue { background: #dbeafe; color: #1e40af; }
+.ap-badge.green { background: #dcfce7; color: #166534; }
+.ap-badge.gray { background: #f3f4f6; color: #4b5563; }
+
+/* Form trong Modal */
+.ap-form { display: flex; flex-direction: column; gap: 12px; }
+.ap-input { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;
+    box-sizing: border-box; font-family: inherit; background: #fff; }
+.ap-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+.ap-label { font-size: 13px; color: #6b7280; display: flex; flex-direction: column; gap: 4px; }
+
+/* Danh sách nhỏ trong Modal (vd thành viên vai trò) */
+.ap-list { max-height: 220px; overflow-y: auto; margin-bottom: 16px; }
+.ap-list-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+.ap-list-sub { color: #6b7280; font-size: 12px; }
