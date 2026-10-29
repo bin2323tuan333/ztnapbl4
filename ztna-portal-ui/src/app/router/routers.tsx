@@ -13,7 +13,7 @@ import { Dashboard } from '@/features/dashboard';
 import { ReportsPage } from '@/features/reports';
 import { ResourcesPage } from '@/features/resources';
 import { NetworkLogsPage } from '@/features/network-log';
-// import { UsersPage } from '@/features/admin-identity';
+import { UsersPage, RolesPage } from '@/features/identity';
 
 export const router = createBrowserRouter([
     {
@@ -25,7 +25,7 @@ export const router = createBrowserRouter([
     },
 
     {
-        element: <ProtectedRoute allowedRoles={['USER']} />,
+        element: <ProtectedRoute allowedRoles={['USER', 'SUPERVISOR']} />,
         children: [
             {
                 element: <UserLayout />,
@@ -47,7 +47,8 @@ export const router = createBrowserRouter([
                     { path: 'reports', element: <ReportsPage /> },
                     { path: 'resources', element: <ResourcesPage /> },
                     { path: 'network-logs', element: <NetworkLogsPage /> },
-                    // { path: 'users', element: <UsersPage /> },
+                    { path: 'users', element: <UsersPage /> },
+                    { path: 'roles', element: <RolesPage /> },
                     // ... các route con khác
                 ]
             }
