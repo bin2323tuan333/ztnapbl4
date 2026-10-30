@@ -13,6 +13,7 @@ import com.example.ztna_server.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,8 +34,18 @@ public class ResourceService {
                 .toList();
     }
 
+        /**
+     * App mà user đang được vào: quyền riêng + quyền qua vai trò, còn hiệu lực,
+     * app và connector đang bật. Dùng lại logic của PermissionService để Portal
+     * và trang "quyền thực tế" của admin luôn cho cùng một kết quả.
+     */
     public List<ResourceResponse> getResourcesByUserId(UUID userId) {
-        return resourceRepository.findAllByUserId(userId).stream()
+        List<UUID> ids = permissionService.getAccessibleResourceIds(userId);
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return resourceRepository.findAllById(ids).stream()
+                .sorted(Comparator.comparing(Resource::getName))
                 .map(resourceMapper::toResourceResponse)
                 .toList();
     }
