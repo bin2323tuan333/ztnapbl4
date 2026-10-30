@@ -14,9 +14,9 @@ export function useLoginNavigation() {
         }
 
         if (me?.role === 'ADMIN') {
-            navigate("/app/home");
-        } else if (me?.role === 'USER') {
-            navigate("/portal");
+            navigate("/dashboard");
+        } else {
+            navigate("/portal"); // USER và SUPERVISOR
         }
     };
 
