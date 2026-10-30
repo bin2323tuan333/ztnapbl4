@@ -53,6 +53,8 @@ export const ADMIN_MENU: MenuItem[] = [
             { label: 'Quản lý quyền', path: '/permissions' },
             { label: 'Cấp quyền theo Vai trò', path: '/permissions/roles' },
             { label: 'Cấp quyền theo Ứng dụng', path: '/permissions/resources' },
+            { label: 'Quyền riêng người dùng', path: '/permissions/users' },
+            { label: 'Quyền sắp hết hạn', path: '/permissions/expiring' },
         ],
     },
 
