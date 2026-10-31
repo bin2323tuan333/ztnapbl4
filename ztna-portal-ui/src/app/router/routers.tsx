@@ -14,6 +14,8 @@ import { ReportsPage } from '@/features/reports';
 import { ResourcesPage } from '@/features/resources';
 import { NetworkLogsPage } from '@/features/network-log';
 import { UsersPage, RolesPage } from '@/features/identity';
+import { ConnectorsPage } from '@/features/connectors';
+import { RulesPage } from '@/features/rules';
 
 export const router = createBrowserRouter([
     {
@@ -49,7 +51,8 @@ export const router = createBrowserRouter([
                     { path: 'network-logs', element: <NetworkLogsPage /> },
                     { path: 'users', element: <UsersPage /> },
                     { path: 'roles', element: <RolesPage /> },
-                    // ... các route con khác
+                    { path: 'connectors', element: <ConnectorsPage /> },
+                    { path: 'rules', element: <RulesPage /> },
                 ]
             }
         ]

@@ -1,294 +1,59 @@
-/* =========================================
-   1. CONTAINER & HEADER
-   ========================================= */
 .resources-container {
-    padding: 32px;
-    max-width: 1400px;
-    margin: 0 auto;
-    background: #ffffff;
+    width: 100%;
+    max-width: 100%;
+    padding: 24px 32px;
+    box-sizing: border-box;
+    background-color: #fafafa;
     min-height: 100vh;
 }
 
-.resources-header {
-    margin-bottom: 24px;
-}
+.resources-header { margin-bottom: 24px; }
+.resources-title { font-size: 24px; font-weight: 600; color: #0f172a; margin: 0; }
 
-.resources-title {
-    font-size: 24px;
-    font-weight: 600;
-    color: #111827;
-    margin: 0;
-}
+.resources-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.search-box { display: flex; align-items: center; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 12px; width: 320px; height: 40px; }
+.search-box .search-icon { color: #94a3b8; margin-right: 8px; }
+.search-box input { border: none; outline: none; width: 100%; font-size: 14px; color: #1e293b; }
+.search-box input::placeholder { color: #94a3b8; }
 
-/* =========================================
-   2. TOOLBAR (Search & Actions)
-   ========================================= */
-.resources-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-}
+.btn-black { display: flex; align-items: center; gap: 8px; background-color: #0f172a; color: #ffffff; border: none; border-radius: 6px; padding: 0 16px; height: 40px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background-color 0.2s; }
+.btn-black:hover { background-color: #1e293b; }
 
-.search-box {
-    position: relative;
-    width: 320px;
-}
+.resources-table-wrapper { width: 100%; background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); overflow-x: auto; }
+.resources-table { width: 100%; border-collapse: collapse; text-align: left; }
+.resources-table th:nth-child(1) { width: 10%; }
+.resources-table th:nth-child(2) { width: 25%; }
+.resources-table th:nth-child(3) { width: 10%; }
+.resources-table th:nth-child(4) { width: 20%; }
+.resources-table th:nth-child(5) { width: 10%; }
+.resources-table th:nth-child(6) { width: 15%; }
+.resources-table th:nth-child(7) { width: 10%; text-align: center; }
 
-.search-box input {
-    width: 100%;
-    padding: 10px 12px 10px 40px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #111827;
-    background: #ffffff;
-    outline: none;
-    transition: border-color 0.2s;
-}
+.resources-table th { background-color: #f8fafc; padding: 16px 20px; font-size: 13px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+.resources-table td { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-size: 14px; color: #1e293b; vertical-align: middle; }
 
-.search-box input::placeholder {
-    color: #9ca3af;
-}
+.resource-row { cursor: pointer; transition: background-color 0.2s; }
+.resource-row:hover { background-color: #f8fafc; }
+.resource-row:last-child td { border-bottom: none; }
 
-.search-box input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
+.app-name-cell { display: flex; align-items: center; gap: 12px; }
+.app-name { font-weight: 500; color: #0f172a; }
+.external-icon { color: #94a3b8; }
+.col-type { font-weight: 500; color: #475569; }
+.text-muted { color: #64748b; }
 
-.search-icon {
-    position: absolute;
-    left: 14px;
-    top: 12px;
-    color: #9ca3af;
-    pointer-events: none;
-}
+.icon-box { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 6px; }
+.icon-box.purple { background-color: #f3e8ff; color: #9333ea; }
+.icon-box.gray { background-color: #f1f5f9; color: #475569; }
+.icon-box.dark { background-color: #1e293b; color: #ffffff; }
 
-.toolbar-actions {
-    display: flex;
-    gap: 12px;
-}
+.toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 24px; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+input:checked + .slider { background-color: #3b82f6; }
+input:checked + .slider:before { transform: translateX(20px); }
 
-/* Nút New Application (Đen) */
-.btn-black {
-    padding: 10px 16px;
-    background: #111827;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: background 0.2s;
-}
-
-.btn-black:hover {
-    background: #374151;
-}
-
-/* =========================================
-   3. TABLE
-   ========================================= */
-.resources-table-wrapper {
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    overflow-x: auto; /* Cho phép cuộn ngang trên màn hình nhỏ */
-    background: #ffffff;
-}
-
-.resources-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-    min-width: 800px; /* Đảm bảo bảng không bị bóp méo trên mobile */
-}
-
-.resources-table th {
-    background: #f9fafb;
-    padding: 14px 20px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #4b5563;
-    border-bottom: 1px solid #e5e7eb;
-    white-space: nowrap;
-}
-
-/* Header của cột Action căn phải */
-.resources-table th:last-child {
-    text-align: right;
-}
-
-.resources-table td {
-    padding: 16px 20px;
-    border-bottom: 1px solid #f3f4f6;
-    font-size: 14px;
-    color: #111827;
-    vertical-align: middle;
-}
-
-.resources-table tr:last-child td {
-    border-bottom: none;
-}
-
-.resource-row:hover td {
-    background-color: #f9fafb;
-}
-
-/* Cột Type và Domain */
-.col-type {
-    color: #6b7280;
-    font-style: normal;
-    font-weight: 400;
-    text-transform: capitalize;
-}
-
-.col-domain {
-    color: #4b5563;
-    font-family: monospace;
-}
-
-/* =========================================
-   4. NAME CELL & ICONS
-   ========================================= */
-.app-name-cell {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.app-name {
-    font-weight: 500;
-    color: #111827;
-}
-
-.external-icon {
-    color: #9ca3af;
-    cursor: pointer;
-    transition: color 0.2s;
-}
-
-.external-icon:hover {
-    color: #3b82f6;
-}
-
-/* Icon Box */
-.icon-box {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    flex-shrink: 0;
-}
-
-.icon-box.purple { background: #a855f7; }
-.icon-box.gray { background: #64748b; }
-.icon-box.red { background: #ef4444; }
-.icon-box.dark { background: #1e293b; }
-
-/* =========================================
-   5. ACTIONS COLUMN
-   ========================================= */
-.actions-cell {
-    text-align: right;
-    white-space: nowrap;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 4px;
-    justify-content: flex-end;
-    opacity: 0.3; /* Mờ mặc định */
-    transition: opacity 0.2s ease-in-out;
-}
-
-.resource-row:hover .action-buttons {
-    opacity: 1; /* Rõ lên khi hover vào dòng */
-}
-
-.icon-btn {
-    background: transparent;
-    border: none;
-    padding: 6px;
-    border-radius: 6px;
-    cursor: pointer;
-    color: #6b7280;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
-
-.icon-btn:hover { 
-    background: #f3f4f6; 
-    color: #111827; 
-}
-
-.icon-btn.danger:hover { 
-    color: #ef4444; 
-    background: #fee2e2; 
-}
-
-/* =========================================
-   6. TOGGLE SWITCH (Công tắc gạt)
-   ========================================= */
-.toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 40px;
-    height: 22px;
-}
-
-.toggle-switch input { 
-    opacity: 0; 
-    width: 0; 
-    height: 0; 
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #e5e7eb;
-    transition: .3s;
-    border-radius: 34px;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 18px; 
-    width: 18px;
-    left: 2px; 
-    bottom: 2px;
-    background-color: #ffffff;
-    transition: .3s;
-    border-radius: 50%;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-}
-
-input:checked + .slider { 
-    background-color: #3b82f6; 
-}
-
-input:checked + .slider:before { 
-    transform: translateX(18px); 
-}
-
-/* =========================================
-   7. UTILITIES
-   ========================================= */
-.text-muted {
-    color: #6b7280;
-}
-
-.text-center {
-    text-align: center;
-    padding: 40px !important;
-    color: #6b7280;
-}
+.error-msg { color: #ef4444; background-color: #fef2f2; padding: 12px; border-radius: 6px; margin-bottom: 16px; }
+.text-center { text-align: center; }
+.py-8 { padding-top: 32px; padding-bottom: 32px; }

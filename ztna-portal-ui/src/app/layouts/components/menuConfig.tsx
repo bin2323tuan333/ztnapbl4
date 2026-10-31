@@ -50,9 +50,7 @@ export const ADMIN_MENU: MenuItem[] = [
         label: 'Phân quyền',
         icon: <KeyRound size={20} />,
         children: [
-            { label: 'Quản lý quyền', path: '/permissions' },
-            { label: 'Cấp quyền theo Vai trò', path: '/permissions/roles' },
-            { label: 'Cấp quyền theo Ứng dụng', path: '/permissions/resources' },
+            { label: 'Quản lý quyền', path: '/rules' },
         ],
     },
 

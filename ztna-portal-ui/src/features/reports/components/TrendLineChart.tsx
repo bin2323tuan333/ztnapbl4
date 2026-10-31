@@ -1,4 +1,6 @@
-// src/features/reports/components/TrendLineChart.tsx
+
+
+
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export const TrendLineChart = ({ data }: { data: any[] }) => {

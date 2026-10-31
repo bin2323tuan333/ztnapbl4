@@ -57,7 +57,7 @@ export interface AssignRoleBody {
 // ───────────── API ─────────────
 
 const USERS = '/api/v1/admin/users';
-const ROLES = '/api/v1/admin/roles';
+const ROLES = '/api/v1/admin/rules';
 
 export const userApi = {
     getAll: (): Promise<User[]> => getRequest(USERS),

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { resourceApi, type Application } from '../api/resourceApi';
+import { resourceApi, type Resource } from '../api/resourceApi';
 
 export const useResources = () => {
-    const [apps, setApps] = useState<Application[]>([]);
+    const [apps, setApps] = useState<Resource[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -12,6 +12,7 @@ export const useResources = () => {
         try {
             const data = await resourceApi.getApplications();
             setApps(data);
+            setError('');
         } catch (err: any) {
             setError(err.message || 'Lỗi tải dữ liệu');
         } finally {
@@ -23,21 +24,28 @@ export const useResources = () => {
         fetchData();
     }, [fetchData]);
 
-    // Lọc theo tên hoặc IP
     const filteredApps = useMemo(() => {
         if (!searchTerm) return apps;
         const lower = searchTerm.toLowerCase();
         return apps.filter(app =>
             app.name.toLowerCase().includes(lower) ||
-            app.domain.includes(lower)
+            app.host.toLowerCase().includes(lower)
         );
     }, [apps, searchTerm]);
 
-    // Giả lập tính năng bật/tắt (sau này gọi API PATCH)
-    const toggleStatus = (id: string) => {
-        setApps(prev => prev.map(app =>
-            app.id === id ? { ...app, enabled: !app.enabled } : app
-        ));
+    const toggleStatus = async (id: string, currentStatus: boolean) => {
+        setApps(prev => prev.map(app => app.id === id ? { ...app, enabled: !currentStatus } : app));
+        try {
+            await resourceApi.toggleStatus(id, !currentStatus);
+        } catch (err) {
+            setApps(prev => prev.map(app => app.id === id ? { ...app, enabled: currentStatus } : app));
+            alert('Không thể đổi trạng thái, vui lòng thử lại!');
+        }
+    };
+
+    const deleteApp = async (id: string) => {
+        await resourceApi.deleteResource(id);
+        setApps(prev => prev.filter(app => app.id !== id));
     };
 
     return {
@@ -47,6 +55,7 @@ export const useResources = () => {
         searchTerm,
         setSearchTerm,
         toggleStatus,
+        deleteApp,
         refetch: fetchData
     };
 };

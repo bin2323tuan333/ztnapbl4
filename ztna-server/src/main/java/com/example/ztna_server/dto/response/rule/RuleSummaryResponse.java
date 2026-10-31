@@ -1,20 +1,25 @@
-package com.example.ztna_server.dto.response;
+package com.example.ztna_server.dto.response.rule;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ConnectorResponse {
+public class RuleSummaryResponse {
     private UUID id;
     private String name;
+    private String description;
+
+    private int userCount;
+    private int resourceCount;
+
+    private Instant createdAt;
     private boolean enabled;
-    private boolean online;     // connector đang kết nối WebSocket tới server
-    private long appCount;      // số app connector đang phụ trách
 }

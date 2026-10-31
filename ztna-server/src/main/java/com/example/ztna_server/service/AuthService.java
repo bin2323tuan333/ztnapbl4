@@ -9,13 +9,11 @@ import com.example.ztna_server.enums.ErrorCode;
 import com.example.ztna_server.exception.AppException;
 import com.example.ztna_server.repository.RefreshTokenRepository;
 import com.example.ztna_server.repository.UserRepository;
-import com.example.ztna_server.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 

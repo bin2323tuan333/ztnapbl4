@@ -1,31 +1,59 @@
-import { getRequest } from '@/shared/utils/apiClient';
+import { getRequest, postRequest, putRequest, patchRequest, deleteRequest } from '@/shared/utils/apiClient';
 
-export type ResourceType = 'SELF_HOSTED_WEB' | 'NETWORK_RANGE' | 'RDP' | 'SSH';
+export type ResourceType = 'WEB' | 'SSH' | 'MYSQL';
 
-export interface Application {
+export interface ConnectorsName {
+    id: string;
+    name: string;
+}
+
+export interface Resource {
     id: string;
     name: string;
     type: ResourceType;
-    domain: string;
-    connectorZone: string;
-    identityProvider: string;
-    tags: string[];
+    host: string;
+    port: number;
     enabled: boolean;
+    connectorZone?: string;
 }
 
-const MOCK_APPS: Application[] = [
-    { id: '1', name: 'Aruba Fabric Composer', type: 'SELF_HOSTED_WEB', domain: '10.10.30.217', connectorZone: 'Homelab', identityProvider: 'Axis IdP', tags: [], enabled: true },
-    { id: '2', name: 'ClearPass', type: 'SELF_HOSTED_WEB', domain: '10.10.30.201', connectorZone: 'Homelab', identityProvider: 'Axis IdP', tags: [], enabled: true },
-    { id: '3', name: 'Mgmt Network', type: 'NETWORK_RANGE', domain: '10.10.30.0/24', connectorZone: 'Homelab', identityProvider: '', tags: [], enabled: true },
-    { id: '4', name: 'PC-1', type: 'RDP', domain: '10.10.30.101', connectorZone: 'Homelab', identityProvider: 'Axis IdP', tags: [], enabled: true },
-    { id: '5', name: 'SSH WAN Simulator', type: 'SSH', domain: '10.10.30.230', connectorZone: 'Homelab', identityProvider: '', tags: [], enabled: true },
-    { id: '6', name: 'test', type: 'SELF_HOSTED_WEB', domain: '12.3.4', connectorZone: 'Homelab', identityProvider: 'Axis IdP', tags: [], enabled: true },
-];
+export interface ResourceDetail extends Resource {
+    description?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    connectorId?: string;
+}
+
+export interface ResourceRequest {
+    name: string;
+    type: ResourceType;
+    host: string;
+    port: number;
+    description?: string;
+    connectorId?: string;
+}
 
 export const resourceApi = {
-    getApplications: async (): Promise<Application[]> => {
-        // TODO: return await getRequest('/admin/resources');
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return MOCK_APPS;
+    getApplications: async (): Promise<Resource[]> => {
+        return await getRequest('/api/v1/admin/resources');
+    },
+    getResourceDetail: async (id: string): Promise<ResourceDetail> => {
+        return await getRequest(`/api/v1/admin/resources/${id}`);
+    },
+    createResource: async (data: ResourceRequest): Promise<ResourceDetail> => {
+        return await postRequest('/api/v1/admin/resources', data);
+    },
+    updateResource: async (id: string, data: ResourceRequest): Promise<ResourceDetail> => {
+        return await putRequest(`/api/v1/admin/resources/${id}`, data);
+    },
+    toggleStatus: async (id: string, enabled: boolean): Promise<ResourceDetail> => {
+        const action = enabled ? 'enable' : 'disable';
+        return await patchRequest(`/api/v1/admin/resources/${id}/${action}`);
+    },
+    deleteResource: async (id: string): Promise<void> => {
+        return await deleteRequest(`/api/v1/admin/resources/${id}`);
+    },
+    getConnectors: async (): Promise<ConnectorsName[]> => {
+        return await getRequest('/api/v1/admin/connectors/names');
     }
 };

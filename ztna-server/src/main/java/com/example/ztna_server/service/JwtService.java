@@ -2,7 +2,6 @@ package com.example.ztna_server.service;
 
 import com.example.ztna_server.entity.User;
 import com.example.ztna_server.repository.UserRepository;
-import com.example.ztna_server.repository.UserRoleRepository;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +26,6 @@ public class JwtService {
     private long accessExpirationMs;
 
     private final UserRepository userRepository;
-    private final UserRoleRepository userRoleRepository;
 
     private SecretKey key() {
         return Keys.hmacShaKeyFor(secret.getBytes());

@@ -2,12 +2,13 @@ package com.example.ztna_server.service;
 
 import com.example.ztna_server.dto.App;
 import com.example.ztna_server.dto.request.ResourceRequest;
-import com.example.ztna_server.dto.response.AdminResourceResponse;
-import com.example.ztna_server.dto.response.ConnectorResponse;
+import com.example.ztna_server.dto.response.resource.AdminResourceDetailResponse;
+import com.example.ztna_server.dto.response.resource.AdminResourceSummaryResponse;
 import com.example.ztna_server.entity.Connector;
 import com.example.ztna_server.entity.Resource;
 import com.example.ztna_server.enums.ErrorCode;
 import com.example.ztna_server.exception.AppException;
+import com.example.ztna_server.mapper.ResourceMapper;
 import com.example.ztna_server.protocol.frames.RoutingResFrame;
 import com.example.ztna_server.repository.ConnectorRepository;
 import com.example.ztna_server.repository.ResourceRepository;
@@ -29,51 +30,45 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Quản lý ứng dụng nội bộ (bảng resources). Mỗi app thuộc đúng 1 connector.
- * Sau mỗi thay đổi: RoutingManager nạp lại bảng định tuyến từ database,
- * rồi gửi ROUTING_RESPONSE mới cho connector đang online (không phải chờ lần quét 60 giây).
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AdminResourceService {
-
     private final ResourceRepository resourceRepository;
     private final ConnectorRepository connectorRepository;
     private final ConnectionRegister connectionRegister;
     private final RoutingManager routingManager;
     private final RoutingTable routingTable;
+    private final ResourceMapper resourceMapper;
 
-    // ───────────── Xem ─────────────
-
-    @Transactional(readOnly = true)
-    public List<AdminResourceResponse> getResources() {
-        return resourceRepository.findAll().stream().map(this::toResponse).toList();
-    }
 
     @Transactional(readOnly = true)
-    public AdminResourceResponse getResource(UUID id) {
-        return toResponse(findResource(id));
-    }
-
-    @Transactional(readOnly = true)
-    public List<ConnectorResponse> getConnectors() {
-        return connectorRepository.findAll().stream()
-                .map(c -> ConnectorResponse.builder()
-                        .id(c.getId())
-                        .name(c.getName())
-                        .enabled(c.isEnabled())
-                        .online(connectionRegister.isOnline(c.getId().toString()))
-                        .appCount(resourceRepository.countByConnectorId(c.getId()))
-                        .build())
+    public List<AdminResourceSummaryResponse> getResources() {
+        return resourceRepository.findAll()
+                .stream()
+                .map(resourceMapper::toAdminResourceSummaryResponse)
                 .toList();
     }
 
-    // ───────────── Thêm / sửa / bật tắt / xóa ─────────────
+    @Transactional(readOnly = true)
+    public AdminResourceDetailResponse getResource(UUID id) {
+        Resource resource = resourceRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        AdminResourceDetailResponse response = resourceMapper.toAdminResourceDetailResponse(resource);
+
+//        if (resource.getConnector() != null) {
+//            response.setConnectorId(resource.getConnector().getId());
+//            response.setConnectorZone(resource.getConnector().getName());
+//        }
+
+        return response;
+    }
+
+
 
     @Transactional
-    public AdminResourceResponse createResource(ResourceRequest request) {
+    public AdminResourceDetailResponse createResource(ResourceRequest request) {
         String name = request.getName().trim();
         if (resourceRepository.existsByName(name)) {
             throw new AppException(ErrorCode.APP_EXISTED);
@@ -97,7 +92,7 @@ public class AdminResourceService {
     }
 
     @Transactional
-    public AdminResourceResponse updateResource(UUID id, ResourceRequest request) {
+    public AdminResourceDetailResponse updateResource(UUID id, ResourceRequest request) {
         Resource resource = findResource(id);
 
         String name = request.getName().trim();
@@ -105,7 +100,6 @@ public class AdminResourceService {
                 .filter(other -> !other.getId().equals(id))
                 .ifPresent(other -> { throw new AppException(ErrorCode.APP_EXISTED); });
 
-        // Đổi connector thì cả connector cũ lẫn mới đều cần bảng định tuyến mới
         Set<UUID> affected = new LinkedHashSet<>();
         affected.add(resource.getConnector().getId());
         Connector connector = findConnector(request.getConnectorId());
@@ -128,7 +122,7 @@ public class AdminResourceService {
     }
 
     @Transactional
-    public AdminResourceResponse setEnabled(UUID id, boolean enabled) {
+    public AdminResourceDetailResponse setEnabled(UUID id, boolean enabled) {
         Resource resource = findResource(id);
         resource.setEnabled(enabled);
         resource.setUpdatedAt(Instant.now());
@@ -152,7 +146,6 @@ public class AdminResourceService {
         refreshAndPush(Set.of(connectorId));
     }
 
-    // ───────────── Hàm phụ ─────────────
 
     /** Nạp lại bảng định tuyến từ DB và gửi ngay cho các connector đang online. */
     private void refreshAndPush(Set<UUID> connectorIds) {
@@ -186,9 +179,9 @@ public class AdminResourceService {
     }
 
     // Gọi trong @Transactional vì connector là LAZY
-    private AdminResourceResponse toResponse(Resource r) {
+    private AdminResourceDetailResponse toResponse(Resource r) {
         Connector c = r.getConnector();
-        return AdminResourceResponse.builder()
+        return AdminResourceDetailResponse.builder()
                 .id(r.getId())
                 .name(r.getName())
                 .type(r.getType())
@@ -196,9 +189,7 @@ public class AdminResourceService {
                 .host(r.getHost())
                 .port(r.getPort())
                 .enabled(r.getEnabled())
-                .connectorId(c.getId())
-                .connectorName(c.getName())
-                .connectorOnline(connectionRegister.isOnline(c.getId().toString()))
+                .connectorZone(c.getName())
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())
                 .build();

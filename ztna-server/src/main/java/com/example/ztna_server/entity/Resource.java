@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -50,6 +51,8 @@ public class Resource {
     @Column(name = "updated_at", nullable = false)
     @Builder.Default
     private Instant updatedAt = Instant.now();
+
+    // THÊM DÒNG NÀY: Để truy vấn ngược từ App ra các Rule (nếu cần)
+    @ManyToMany(mappedBy = "resources", fetch = FetchType.LAZY)
+    private List<Rule> rules;
 }
-
-

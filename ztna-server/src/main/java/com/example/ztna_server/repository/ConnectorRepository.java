@@ -8,4 +8,7 @@ import java.util.UUID;
 
 public interface ConnectorRepository extends JpaRepository<Connector, UUID> {
     Optional<Connector> findByConnectionString(String connectionString);
+    boolean existsByName(String name);
+    boolean existsByNameAndIdNot(String name, UUID id);
+    Optional<Connector> findByName(String name);
 }

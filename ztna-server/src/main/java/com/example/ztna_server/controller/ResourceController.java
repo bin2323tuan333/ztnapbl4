@@ -1,6 +1,6 @@
 package com.example.ztna_server.controller;
 
-import com.example.ztna_server.dto.response.ResourceResponse;
+import com.example.ztna_server.dto.response.resource.ResourceResponse;
 import com.example.ztna_server.service.ResourceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class ResourceController {
     private final ResourceService resourceService;
@@ -26,14 +26,7 @@ public class ResourceController {
             return ResponseEntity.status(401).build();
         }
         UUID userId = UUID.fromString(userIdStr);
-        List<ResourceResponse> resources = resourceService.getResourcesByUserId(userId);
-        return ResponseEntity.ok(resources);
-    }
-
-    @GetMapping("/resources")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<ResourceResponse>> getResources() {
-        List<ResourceResponse> resources = resourceService.getResources();
+        List<ResourceResponse> resources = /*resourceService.getResourcesByUserId(userId);*/ null;
         return ResponseEntity.ok(resources);
     }
 }
