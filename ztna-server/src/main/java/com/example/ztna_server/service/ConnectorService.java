@@ -6,6 +6,7 @@ import com.example.ztna_server.dto.response.connector.ConnectorDetailResponse;
 import com.example.ztna_server.dto.response.connector.ConnectorNameResponse;
 import com.example.ztna_server.dto.response.connector.ConnectorSummaryResponse;
 import com.example.ztna_server.entity.Connector;
+import com.example.ztna_server.enums.TargetType;
 import com.example.ztna_server.mapper.ConnectorMapper;
 import com.example.ztna_server.repository.ConnectorRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class ConnectorService {
 
     private final ConnectorRepository connectorRepository;
     private final ConnectorMapper connectorMapper;
+    private final AuditService auditService;  
 
     // --- GET ---
 
@@ -58,7 +60,18 @@ public class ConnectorService {
         connector.setCreatedAt(Instant.now());
         connector.setUpdatedAt(Instant.now());
 
-        return connectorMapper.toDetailResponse(connectorRepository.save(connector));
+        Connector saved = connectorRepository.save(connector);
+
+        // Audit log
+        auditService.log(
+                "CREATE_CONNECTOR",
+                TargetType.CONNECTOR,
+                saved.getId().toString(),
+                saved.getName(),
+                null
+        );
+
+        return connectorMapper.toDetailResponse(saved);
     }
 
     @Transactional
@@ -73,7 +86,18 @@ public class ConnectorService {
         connectorMapper.updateEntityFromRequest(request, connector);
         connector.setUpdatedAt(Instant.now());
 
-        return connectorMapper.toDetailResponse(connectorRepository.save(connector));
+        Connector saved = connectorRepository.save(connector);
+
+        // Audit log
+        auditService.log(
+                "UPDATE_CONNECTOR",
+                TargetType.CONNECTOR,
+                saved.getId().toString(),
+                saved.getName(),
+                null
+        );
+
+        return connectorMapper.toDetailResponse(saved);
     }
 
     @Transactional
@@ -84,14 +108,35 @@ public class ConnectorService {
         connector.setEnabled(!connector.isEnabled());
         connector.setUpdatedAt(Instant.now());
 
-        return connectorMapper.toDetailResponse(connectorRepository.save(connector));
+        Connector saved = connectorRepository.save(connector);
+
+        // Audit log
+        auditService.log(
+                saved.isEnabled() ? "ENABLE_CONNECTOR" : "DISABLE_CONNECTOR",
+                TargetType.CONNECTOR,
+                saved.getId().toString(),
+                saved.getName(),
+                null
+        );
+
+        return connectorMapper.toDetailResponse(saved);
     }
 
     @Transactional
     public void deleteConnector(UUID id) {
-        if (!connectorRepository.existsById(id)) {
-            throw new RuntimeException("Connector không tồn tại");
-        }
+        Connector connector = connectorRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Connector không tồn tại"));
+
+        String name = connector.getName();
         connectorRepository.deleteById(id);
+
+        // Audit log
+        auditService.log(
+                "DELETE_CONNECTOR",
+                TargetType.CONNECTOR,
+                id.toString(),
+                name,
+                null
+        );
     }
 }

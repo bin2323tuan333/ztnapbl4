@@ -8,15 +8,19 @@ import com.example.ztna_server.dto.response.UserResponse;
 import com.example.ztna_server.entity.User;
 import com.example.ztna_server.enums.ErrorCode;
 import com.example.ztna_server.enums.Role;
+import com.example.ztna_server.enums.TargetType;
 import com.example.ztna_server.exception.AppException;
 import com.example.ztna_server.mapper.UserMapper;
 import com.example.ztna_server.repository.RefreshTokenRepository;
 import com.example.ztna_server.repository.UserRepository;
 import com.example.ztna_server.security.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Instant;
 import java.util.List;
@@ -25,11 +29,14 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final AuditService auditService;          
 
+    // ───────────── Dùng nội bộ ─────────────
 
     public UserInfo getUserByUsername(String username) {
         User user = userRepository.findByUsername(username)
@@ -53,6 +60,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // ───────────── Quản lý user ─────────────
 
     public List<UserResponse> getUsers() {
         return userRepository.findAll().stream()
@@ -84,7 +92,18 @@ public class UserService {
                 .updatedAt(Instant.now())
                 .build();
 
-        return userMapper.toUserResponse(userRepository.save(user));
+        User saved = userRepository.save(user);
+
+        // Ghi audit
+        auditService.log(
+                "CREATE_USER",
+                TargetType.USER,
+                saved.getId().toString(),
+                saved.getUsername(),
+                getClientIp()
+        );
+
+        return userMapper.toUserResponse(saved);
     }
 
     public UserResponse updateUser(UUID id, UpdateUserRequest request) {
@@ -105,7 +124,19 @@ public class UserService {
         user.setFullName(request.getFullName());
         user.setEmail(email);
         user.setUpdatedAt(Instant.now());
-        return userMapper.toUserResponse(userRepository.save(user));
+
+        User saved = userRepository.save(user);
+
+        // Ghi audit
+        auditService.log(
+                "UPDATE_USER",
+                TargetType.USER,
+                saved.getId().toString(),
+                saved.getUsername(),
+                getClientIp()
+        );
+
+        return userMapper.toUserResponse(saved);
     }
 
     public void blockUser(UUID id) {
@@ -115,6 +146,15 @@ public class UserService {
             user.setEnabled(false);
             user.setUpdatedAt(Instant.now());
             userRepository.save(user);
+
+            // Ghi audit
+            auditService.log(
+                    "BLOCK_USER",
+                    TargetType.USER,
+                    user.getId().toString(),
+                    user.getUsername(),
+                    getClientIp()
+            );
         }
         refreshTokenRepository.findByUserId(id).ifPresent(refreshTokenRepository::delete);
     }
@@ -125,6 +165,15 @@ public class UserService {
             user.setEnabled(true);
             user.setUpdatedAt(Instant.now());
             userRepository.save(user);
+
+            // Ghi audit
+            auditService.log(
+                    "UNBLOCK_USER",
+                    TargetType.USER,
+                    user.getId().toString(),
+                    user.getUsername(),
+                    getClientIp()
+            );
         }
     }
 
@@ -133,19 +182,39 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setUpdatedAt(Instant.now());
         userRepository.save(user);
-        // Đổi mật khẩu thì đăng xuất các phiên cũ
+
+        // Đổi mật khẩu → đăng xuất phiên cũ
         refreshTokenRepository.findByUserId(id).ifPresent(refreshTokenRepository::delete);
+
+        // Ghi audit
+        auditService.log(
+                "RESET_PASSWORD",
+                TargetType.USER,
+                user.getId().toString(),
+                user.getUsername(),
+                getClientIp()
+        );
     }
 
     public void deleteUser(UUID id) {
         ensureNotSelf(id);
         User user = findUser(id);
+        String username = user.getUsername(); // giữ lại trước khi xóa
+
         refreshTokenRepository.findByUserId(id).ifPresent(refreshTokenRepository::delete);
         try {
             userRepository.delete(user);
             userRepository.flush();
+
+            // Ghi audit
+            auditService.log(
+                    "DELETE_USER",
+                    TargetType.USER,
+                    id.toString(),
+                    username,
+                    getClientIp()
+            );
         } catch (DataIntegrityViolationException e) {
-            // User đã có log / phân quyền trỏ tới → không xóa được, nên khóa thay vì xóa
             throw new AppException(ErrorCode.USER_IN_USE);
         }
     }
@@ -165,5 +234,22 @@ public class UserService {
 
     private String normalizeEmail(String email) {
         return (email == null || email.isBlank()) ? null : email.trim();
+    }
+
+    private String getClientIp() {
+        try {
+            ServletRequestAttributes attrs =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) return null;
+
+            HttpServletRequest request = attrs.getRequest();
+            String ip = request.getHeader("X-Forwarded-For");
+            if (ip == null || ip.isBlank()) {
+                ip = request.getRemoteAddr();
+            }
+            return ip;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

@@ -93,9 +93,24 @@ public class AuditService {
             case CREATE_RESOURCE -> "Tạo resource: " + target;
             case UPDATE_RESOURCE -> "Cập nhật resource: " + target;
             case DELETE_RESOURCE -> "Xóa resource: " + target;
+            case ENABLE_RESOURCE -> "Kích hoạt resource: " + target;
+            case DISABLE_RESOURCE -> "Vô hiệu hóa resource: " + target;
 
-            case ASSIGN_PERMISSION -> "Gán quyền cho: " + target;
-            case REVOKE_PERMISSION -> "Thu hồi quyền của: " + target;
+            case CREATE_CONNECTOR -> "Tạo connector: " + target;
+            case UPDATE_CONNECTOR -> "Cập nhật connector: " + target;
+            case DELETE_CONNECTOR -> "Xóa connector: " + target;
+            case ENABLE_CONNECTOR -> "Kích hoạt connector: " + target;
+            case DISABLE_CONNECTOR -> "Vô hiệu hóa connector: " + target;
+            case CONNECTOR_ONLINE -> "Connector online: " + target;
+            case CONNECTOR_OFFLINE -> "Connector offline: " + target;
+
+            case CREATE_RULE -> "Tạo rule: " + target;
+            case UPDATE_RULE -> "Cập nhật rule: " + target;
+            case DELETE_RULE -> "Xóa rule: " + target;
+            case ENABLE_RULE -> "Kích hoạt rule: " + target;
+            case DISABLE_RULE -> "Vô hiệu hóa rule: " + target;
+            case ASSIGN_USER_TO_RULE -> "Gán user vào rule: " + target;
+            case ASSIGN_RESOURCE_TO_RULE -> "Gán resource vào rule: " + target;
 
             default -> action.name() + (target.isBlank() ? "" : " - " + target);
         };

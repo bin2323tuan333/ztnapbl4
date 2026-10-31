@@ -7,6 +7,7 @@ import com.example.ztna_server.dto.response.resource.AdminResourceSummaryRespons
 import com.example.ztna_server.entity.Connector;
 import com.example.ztna_server.entity.Resource;
 import com.example.ztna_server.enums.ErrorCode;
+import com.example.ztna_server.enums.TargetType;
 import com.example.ztna_server.exception.AppException;
 import com.example.ztna_server.mapper.ResourceMapper;
 import com.example.ztna_server.protocol.frames.RoutingResFrame;
@@ -15,6 +16,7 @@ import com.example.ztna_server.repository.ResourceRepository;
 import com.example.ztna_server.routes.ConnectionRegister;
 import com.example.ztna_server.routes.RoutingManager;
 import com.example.ztna_server.routes.RoutingTable;
+import com.example.ztna_server.security.SecurityUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -40,7 +42,7 @@ public class AdminResourceService {
     private final RoutingManager routingManager;
     private final RoutingTable routingTable;
     private final ResourceMapper resourceMapper;
-
+    private final AuditService auditService;   
 
     @Transactional(readOnly = true)
     public List<AdminResourceSummaryResponse> getResources() {
@@ -56,15 +58,8 @@ public class AdminResourceService {
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
         AdminResourceDetailResponse response = resourceMapper.toAdminResourceDetailResponse(resource);
-
-//        if (resource.getConnector() != null) {
-//            response.setConnectorId(resource.getConnector().getId());
-//            response.setConnectorZone(resource.getConnector().getName());
-//        }
-
         return response;
     }
-
 
 
     @Transactional
@@ -86,6 +81,15 @@ public class AdminResourceService {
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
                 .build());
+
+        // Ghi audit log
+        auditService.log(
+                "CREATE_RESOURCE",
+                TargetType.RESOURCE,
+                resource.getId().toString(),
+                resource.getName(),
+                null
+        );
 
         refreshAndPush(Set.of(connector.getId()));
         return toResponse(resource);
@@ -117,6 +121,15 @@ public class AdminResourceService {
         resource.setUpdatedAt(Instant.now());
         resourceRepository.saveAndFlush(resource);
 
+        // Ghi audit log
+        auditService.log(
+                "UPDATE_RESOURCE",
+                TargetType.RESOURCE,
+                resource.getId().toString(),
+                resource.getName(),
+                null
+        );
+
         refreshAndPush(affected);
         return toResponse(resource);
     }
@@ -128,6 +141,14 @@ public class AdminResourceService {
         resource.setUpdatedAt(Instant.now());
         resourceRepository.saveAndFlush(resource);
 
+        // Ghi audit log
+        auditService.log(
+                enabled ? "ENABLE_RESOURCE" : "DISABLE_RESOURCE",
+                TargetType.RESOURCE,
+                resource.getId().toString(),
+                resource.getName().toString(),
+                null);
+
         refreshAndPush(Set.of(resource.getConnector().getId()));
         return toResponse(resource);
     }
@@ -136,18 +157,28 @@ public class AdminResourceService {
     public void deleteResource(UUID id) {
         Resource resource = findResource(id);
         UUID connectorId = resource.getConnector().getId();
+        String resourceName = resource.getName();
+
         try {
             resourceRepository.delete(resource);
             resourceRepository.flush();
         } catch (DataIntegrityViolationException e) {
-            // App còn quyền truy cập hoặc log trỏ tới → hủy cả giao dịch, giữ nguyên dữ liệu
             throw new AppException(ErrorCode.APP_IN_USE);
         }
+
+        // Ghi audit log
+        auditService.log(
+                "DELETE_RESOURCE",
+                TargetType.RESOURCE,
+                id.toString(),
+                resourceName,
+                null
+        );
+
         refreshAndPush(Set.of(connectorId));
     }
 
 
-    /** Nạp lại bảng định tuyến từ DB và gửi ngay cho các connector đang online. */
     private void refreshAndPush(Set<UUID> connectorIds) {
         routingManager.refreshRoutingTable();
         for (UUID cid : connectorIds) {
@@ -178,7 +209,6 @@ public class AdminResourceService {
         return (s == null || s.isBlank()) ? null : s.trim();
     }
 
-    // Gọi trong @Transactional vì connector là LAZY
     private AdminResourceDetailResponse toResponse(Resource r) {
         Connector c = r.getConnector();
         return AdminResourceDetailResponse.builder()

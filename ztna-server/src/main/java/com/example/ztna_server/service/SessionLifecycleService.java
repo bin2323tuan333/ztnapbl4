@@ -1,6 +1,7 @@
 package com.example.ztna_server.service;
 
 import com.example.ztna_server.dto.App;
+import com.example.ztna_server.enums.Decision;
 import com.example.ztna_server.protocol.frames.CloseFrame;
 import com.example.ztna_server.protocol.frames.ConnectFrame;
 import com.example.ztna_server.protocol.frames.DataFrame;
@@ -24,12 +25,27 @@ public class SessionLifecycleService {
     private final SessionManager sessionManager;
     private final ConnectionRegister connectionRegister;
     private final RoutingTable routingTable;
+    private final AccessLogService accessLogService;
 
     public Session openSession(String reqId, String userId, String appId, Channel clientChannel) {
         AppRoute route = routingTable.getAppRoute(appId);
 
         if (route == null) {
             log.warn("[Lifecycle] App không tồn tại: {}", appId);
+
+            accessLogService.log(
+                    UUID.fromString(reqId),
+                    UUID.fromString(userId),
+                    null,                   // username 
+                    UUID.fromString(appId),
+                    null,                   // resourceName
+                    null,                   // connectorId
+                    null,                   // path
+                    "CONNECT",
+                    null,                   // clientIp
+                    Decision.DENY,
+                    "App không tồn tại"
+            );
             return null;
         }
 
@@ -39,6 +55,20 @@ public class SessionLifecycleService {
         Channel connCh = connectionRegister.getChannel(connectorId);
         if (connCh == null || !connCh.isActive()) {
             log.warn("[Lifecycle] Connector {} offline", connectorId);
+
+            accessLogService.log(
+                    UUID.fromString(reqId),
+                    UUID.fromString(userId),
+                    null,
+                    UUID.fromString(appId),
+                    app.getName(),
+                    UUID.fromString(connectorId),
+                    null,
+                    "CONNECT",
+                    null,
+                    Decision.DENY,
+                    "Connector offline"
+            );
             return null;
         }
 
@@ -64,6 +94,20 @@ public class SessionLifecycleService {
 
         session.setState(Session.State.OPENING);
 
+        accessLogService.log(
+                UUID.fromString(reqId),
+                UUID.fromString(userId),
+                null,
+                UUID.fromString(appId),
+                app.getName(),
+                UUID.fromString(connectorId),
+                null,
+                "CONNECT",
+                null,
+                Decision.ALLOW,
+                "Mở session thành công"
+        );
+        
         log.info("[Lifecycle] OPEN stream={} user={} app={} conn={}", streamId, userId, appId, connectorId);
 
         return session;

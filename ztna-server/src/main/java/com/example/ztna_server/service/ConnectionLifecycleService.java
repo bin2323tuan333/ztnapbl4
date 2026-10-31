@@ -1,5 +1,6 @@
 package com.example.ztna_server.service;
 
+import com.example.ztna_server.enums.TargetType;
 import com.example.ztna_server.routes.ConnectionRegister;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
@@ -9,21 +10,37 @@ import org.springframework.stereotype.Service;
 @Service
 public class ConnectionLifecycleService {
     private final ConnectionRegister connectionRegister;
-    public ConnectionLifecycleService(ConnectionRegister connectionRegister) {
+    private final AuditService auditService;
+
+    public ConnectionLifecycleService(ConnectionRegister connectionRegister, AuditService auditService) {
         this.connectionRegister = connectionRegister;
+        this.auditService = auditService;
     }
 
     public void disconnect(String connectorId) {
         Channel channel = connectionRegister.getChannel(connectorId);
         connectionRegister.remove(connectorId);
+        auditService.log(
+                "CONNECTOR_OFFLINE",
+                TargetType.CONNECTOR,
+                connectorId,
+                connectorId.toString() + " disconnected",
+                null
+        );
         if (channel == null) return;
         channel.close();
-
     }
 
     public void register(String connectorId, Channel channel) {
         if (channel == null || !channel.isActive()) {
             log.warn("[ConnLifecycle] register: channel null/inactive for {}", connectorId);
+            auditService.log(
+                    "CONNECTOR_ONLINE",          
+                    TargetType.CONNECTOR,
+                    connectorId,
+                    connectorId.toString() + " connected",
+                    null
+        );
             return;
         }
 

@@ -8,6 +8,7 @@ import com.example.ztna_server.dto.response.rule.RuleSummaryResponse;
 import com.example.ztna_server.entity.Resource;
 import com.example.ztna_server.entity.Rule;
 import com.example.ztna_server.entity.User;
+import com.example.ztna_server.enums.TargetType;
 import com.example.ztna_server.mapper.RuleMapper;
 import com.example.ztna_server.repository.ResourceRepository;
 import com.example.ztna_server.repository.RuleRepository;
@@ -31,6 +32,7 @@ public class RuleService {
     private final UserRepository userRepository;
     private final ResourceRepository resourceRepository;
     private final RuleMapper ruleMapper;
+    private final AuditService auditService;   
 
     @Transactional(readOnly = true)
     public List<RuleSummaryResponse> getAllRules() {
@@ -64,7 +66,18 @@ public class RuleService {
             rule.setResources(new HashSet<>(resourceRepository.findAllById(request.getResourceIds())));
         }
 
-        return ruleMapper.toDetailResponse(ruleRepository.save(rule));
+        Rule saved = ruleRepository.save(rule);
+
+        // Audit log
+        auditService.log(
+                "CREATE_RULE",
+                TargetType.SYSTEM,          
+                saved.getId().toString(),
+                saved.getName(),
+                null
+        );
+
+        return ruleMapper.toDetailResponse(saved);
     }
 
     @Transactional
@@ -79,6 +92,15 @@ public class RuleService {
         rule.setUsers(newUsers);
         rule.setUpdatedAt(Instant.now());
         ruleRepository.save(rule);
+
+        // Audit log
+        auditService.log(
+                "ASSIGN_USER_TO_RULE",
+                TargetType.SYSTEM,
+                rule.getId().toString(),
+                rule.getName(),
+                null
+        );
     }
 
     @Transactional
@@ -93,6 +115,15 @@ public class RuleService {
         rule.setResources(newResources);
         rule.setUpdatedAt(Instant.now());
         ruleRepository.save(rule);
+
+        // Audit log
+        auditService.log(
+                "ASSIGN_RESOURCE_TO_RULE",
+                TargetType.SYSTEM,
+                rule.getId().toString(),
+                rule.getName(),
+                null
+        );
     }
 
     @Transactional
@@ -103,13 +134,32 @@ public class RuleService {
         rule.setEnabled(!rule.isEnabled());
         rule.setUpdatedAt(Instant.now());
         ruleRepository.save(rule);
+
+        // Audit log
+        auditService.log(
+                rule.isEnabled() ? "ENABLE_RULE" : "DISABLE_RULE",
+                TargetType.SYSTEM,
+                rule.getId().toString(),
+                rule.getName(),
+                null
+        );
     }
 
     @Transactional
     public void deleteRule(UUID id) {
-        if (!ruleRepository.existsById(id)) {
-            throw new RuntimeException("Rule không tồn tại");
-        }
+        Rule rule = ruleRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Rule không tồn tại"));
+
+        String ruleName = rule.getName();
         ruleRepository.deleteById(id);
+
+        // Audit log
+        auditService.log(
+                "DELETE_RULE",
+                TargetType.SYSTEM,
+                id.toString(),
+                ruleName,
+                null
+        );
     }
 }
