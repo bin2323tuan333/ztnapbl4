@@ -129,6 +129,7 @@ public class DataInit implements CommandLineRunner {
                 // Rule 1: Nhóm Dev
                 Rule devRule = Rule.builder()
                         // ...
+                        .name("Dev Team Access")
                         .users(Set.of(alice, bob)) // Đổi List thành Set
                         .resources(Set.of(web, ssh)) // Đổi List thành Set
                         .build();
@@ -136,6 +137,7 @@ public class DataInit implements CommandLineRunner {
                 // Rule 2: Nhóm DBA
                 Rule dbaRule = Rule.builder()
                         // ...
+                        .name("DBA Team Access")
                         .users(Set.of(alice, adminUser))
                         .resources(Set.of(mysql))
                         .build();
@@ -143,6 +145,7 @@ public class DataInit implements CommandLineRunner {
                 // Rule 3: Admin
                 Rule adminRule = Rule.builder()
                         // ...
+                        .name("Super Admin Access")
                         .users(Set.of(adminUser))
                         .resources(Set.of(web, ssh, mysql))
                         .build();
@@ -150,6 +153,7 @@ public class DataInit implements CommandLineRunner {
                 // Rule 4: User Only
                 Rule singleUserRule = Rule.builder()
                         // ...
+                        .name("Cá nhân - User Only")
                         .users(Set.of(normalUser))
                         .resources(Set.of(web))
                         .build();
