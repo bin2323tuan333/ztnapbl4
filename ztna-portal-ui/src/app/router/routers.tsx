@@ -16,6 +16,7 @@ import { NetworkLogsPage } from '@/features/network-log';
 import { UsersPage, RolesPage } from '@/features/identity';
 import { ConnectorsPage } from '@/features/connectors';
 import { RulesPage } from '@/features/rules';
+import { AuditLogsPage } from '@/features/audit-log';
 
 export const router = createBrowserRouter([
     {
@@ -23,7 +24,7 @@ export const router = createBrowserRouter([
         children: [
             { path: '/', element: <OverviewPage /> },
             { path: '/login', element: <LoginPage /> },
-        ]
+        ],
     },
 
     {
@@ -33,9 +34,9 @@ export const router = createBrowserRouter([
                 element: <UserLayout />,
                 children: [
                     { path: '/portal', element: <PortalPage /> },
-                ]
-            }
-        ]
+                ],
+            },
+        ],
     },
 
     {
@@ -49,14 +50,15 @@ export const router = createBrowserRouter([
                     { path: 'reports', element: <ReportsPage /> },
                     { path: 'resources', element: <ResourcesPage /> },
                     { path: 'network-logs', element: <NetworkLogsPage /> },
+                    { path: 'audit-logs', element: <AuditLogsPage /> },
                     { path: 'users', element: <UsersPage /> },
                     { path: 'roles', element: <RolesPage /> },
                     { path: 'connectors', element: <ConnectorsPage /> },
                     { path: 'rules', element: <RulesPage /> },
-                ]
-            }
-        ]
+                ],
+            },
+        ],
     },
 
-    { path: '*', element: <Navigate to="/" replace /> }
+    { path: '*', element: <Navigate to="/" replace /> },
 ]);
