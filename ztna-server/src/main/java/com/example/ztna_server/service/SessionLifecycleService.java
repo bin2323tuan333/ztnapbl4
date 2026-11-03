@@ -1,11 +1,14 @@
 package com.example.ztna_server.service;
 
 import com.example.ztna_server.dto.App;
+import com.example.ztna_server.entity.User;
 import com.example.ztna_server.enums.Decision;
 import com.example.ztna_server.protocol.frames.CloseFrame;
 import com.example.ztna_server.protocol.frames.ConnectFrame;
 import com.example.ztna_server.protocol.frames.DataFrame;
 import com.example.ztna_server.protocol.frames.HttpResFrame;
+import com.example.ztna_server.repository.RuleRepository;
+import com.example.ztna_server.repository.UserRepository;
 import com.example.ztna_server.routes.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -26,6 +29,7 @@ public class SessionLifecycleService {
     private final ConnectionRegister connectionRegister;
     private final RoutingTable routingTable;
     private final AccessLogService accessLogService;
+    private final UserRepository userRepository;
 
     public Session openSession(String reqId, String userId, String appId, Channel clientChannel) {
         AppRoute route = routingTable.getAppRoute(appId);
@@ -94,10 +98,15 @@ public class SessionLifecycleService {
 
         session.setState(Session.State.OPENING);
 
+        String username = userRepository.findById(UUID.fromString(userId))
+                .map(User::getUsername)
+                .orElse("Unknown User");
+
+
         accessLogService.log(
                 UUID.fromString(reqId),
                 UUID.fromString(userId),
-                null,
+                username,
                 UUID.fromString(appId),
                 app.getName(),
                 UUID.fromString(connectorId),

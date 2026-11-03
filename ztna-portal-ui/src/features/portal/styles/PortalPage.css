@@ -1,11 +1,13 @@
+/* Layout tổng thể */
 .portal-wrapper {
-  max-width: 1200px;
+    width: 100%;
   margin: 0 auto;
   padding: 32px 24px;
   min-height: calc(100vh - 64px);
   box-sizing: border-box;
 }
 
+/* Trạng thái Đang tải */
 .portal-loading {
   display: flex;
   align-items: center;
@@ -15,6 +17,7 @@
   color: #6b7280;
 }
 
+/* Trạng thái Trống (Chưa có app nào) */
 .portal-empty-state {
   display: flex;
   flex-direction: column;
@@ -45,6 +48,7 @@
   margin: 0;
 }
 
+/* Thanh tìm kiếm */
 .portal-search {
   max-width: 480px;
   margin: 0 auto 32px auto;
@@ -61,20 +65,25 @@
   color: #1f2937;
 }
 
+/* ==========================================
+   LƯỚI HIỂN THỊ APP THEO HÀNG NGANG (GRID)
+   ========================================== */
 .portal-grid {
   display: grid;
+  /* Tự động chia cột, mỗi thẻ rộng tối thiểu 300px */
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 24px;
   align-items: stretch;
 }
 
+/* Responsive cho màn hình nhỏ (Mobile) */
 @media (max-width: 640px) {
   .portal-wrapper {
     padding: 24px 16px;
   }
 
   .portal-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* Trên mobile xếp dọc 1 cột */
   }
 
   .portal-empty-title {

@@ -21,8 +21,6 @@ public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
 
-    // ───────────────────────── Ghi log ─────────────────────────
-
     @Transactional
     public void log(UUID actorId,
                     String actorUsername,
@@ -61,7 +59,6 @@ public class AuditService {
         log(actorId, actorUsername, actionStr, targetType, targetId, extraInfo, ipAddress);
     }
 
-    // ───────────────────────── Parse + Translate ─────────────────────────
 
     private Action parseAction(String actionStr) {
         try {
@@ -116,7 +113,6 @@ public class AuditService {
         };
     }
 
-    // ───────────────────────── Query ─────────────────────────
 
     @Transactional(readOnly = true)
     public Page<AuditLogResponse> search(String actorUsername,

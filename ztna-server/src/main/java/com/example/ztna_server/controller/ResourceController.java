@@ -16,17 +16,18 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('USER')")
 public class ResourceController {
     private final ResourceService resourceService;
 
     @GetMapping("/myresources")
-    @PreAuthorize("hasAnyRole('USER', 'SUPERVISOR')")
     public ResponseEntity<List<ResourceResponse>> getMyResources(@AuthenticationPrincipal String userIdStr) {
         if (userIdStr == null) {
             return ResponseEntity.status(401).build();
         }
         UUID userId = UUID.fromString(userIdStr);
-        List<ResourceResponse> resources = /*resourceService.getResourcesByUserId(userId);*/ null;
+        System.out.println(userIdStr.toString());
+        List<ResourceResponse> resources = resourceService.getResourcesByUserId(userId);
         return ResponseEntity.ok(resources);
     }
 }

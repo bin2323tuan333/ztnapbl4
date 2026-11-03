@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -26,9 +27,9 @@ public class ResourceService {
                 .toList();
     }
 
-//    public List<ResourceResponse> getResourcesByUserId(UUID userId) {
-//        return resourceRepository.findAllByUserId(userId).stream()
-//                .map(resourceMapper::toResourceResponse)
-//                .toList();
-//    }
+    public List<ResourceResponse> getResourcesByUserId(UUID userId) {
+        return resourceRepository.findAllByUserId(userId).stream()
+                .map(resourceMapper::toResourceResponse)
+                .toList();
+    }
 }

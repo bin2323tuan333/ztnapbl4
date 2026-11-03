@@ -1,20 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Monitor } from 'lucide-react';
 import { usePortal } from '../hooks/usePortal';
-import '../styles/PortalPage.css';
 import { SearchBar } from '@/components/common/SearchBar';
-import { ResourceCard } from '../component/ResourceCard';
-import { AppDetailModal } from '../component/AppDetailModal';
+import { ResourceCard } from '../components/ResourceCard';
+import { AppDetailModal } from '../components/AppDetailModal';
+import '../styles/PortalPage.css';
 
 const PortalPage = () => {
-    const {
-        resources,
-        selectedResource,
-        loading,
-        handleSelectResource,
-        handleCloseModal,
-    } = usePortal();
-
+    const { resources, selectedResource, loading, handleSelectResource, handleCloseModal } = usePortal();
     const [keyword, setKeyword] = useState('');
 
     const filtered = useMemo(() => {
@@ -23,7 +16,7 @@ const PortalPage = () => {
         return resources.filter((r) =>
             r.name.toLowerCase().includes(q) ||
             (r.description ?? '').toLowerCase().includes(q) ||
-            r.type.toLowerCase().includes(q)
+            r.type.includes(q)
         );
     }, [resources, keyword]);
 
@@ -39,8 +32,7 @@ const PortalPage = () => {
                         <Monitor size={64} className="portal-empty-icon" />
                         <h2 className="portal-empty-title">Chưa có ứng dụng nào</h2>
                         <p className="portal-empty-desc">
-                            Hiện tại bạn chưa được cấp quyền truy cập ứng dụng nào.
-                            <br />
+                            Hiện tại bạn chưa được cấp quyền truy cập ứng dụng nào.<br />
                             Vui lòng liên hệ quản trị viên để được cấp quyền.
                         </p>
                     </div>

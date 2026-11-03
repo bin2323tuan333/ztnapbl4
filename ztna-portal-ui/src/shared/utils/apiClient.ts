@@ -22,7 +22,6 @@ const request = async (path: string, method: string, body?: any): Promise<any> =
 
     const res = await fetch(`${BACKEND_URL}${path}`, options);
 
-    // 1. Xử lý tự động Refresh Token khi bị 401
     if (res.status === 401 && path !== '/api/v1/auth/login' && path !== '/api/v1/auth/refresh') {
         try {
             const refreshRes = await fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
@@ -33,28 +32,25 @@ const request = async (path: string, method: string, body?: any): Promise<any> =
             if (refreshRes.ok) {
                 const refreshData = await refreshRes.json();
                 localStorage.setItem('accessToken', refreshData.accessToken);
-                // Gọi lại request ban đầu với token mới
                 return request(path, method, body);
             } else {
                 throw new Error('Refresh token hết hạn');
             }
         } catch (e) {
-            // Nếu refresh thất bại, xóa token và đá về trang login
             localStorage.removeItem('accessToken');
             window.location.href = '/login';
             throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         }
     }
 
-    // 2. Đọc dữ liệu trả về một cách AN TOÀN (không bị crash nếu là HTML)
     const text = await res.text();
     let data: any = null;
 
     if (text) {
         try {
-            data = JSON.parse(text); // Thử parse JSON
+            data = JSON.parse(text);
         } catch (e) {
-            data = { message: text }; // Nếu là HTML/Text thì đưa vào message
+            data = { message: text };
         }
     }
 

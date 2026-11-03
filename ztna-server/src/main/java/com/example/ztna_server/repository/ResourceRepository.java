@@ -24,30 +24,23 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
     boolean existsByName(String name);
     long countByConnectorId(UUID connectorId);
 
-//    @Query("""
-//    SELECT new com.example.ztna_server.dto.internal.ResourceAccess(
-//        r.id, r.name, r.type, r.description, r.enabled
-//    )
-//    FROM Resource r
-//    WHERE r.id IN (
-//        SELECT up.resourceId
-//        FROM UserPermition up
-//        WHERE up.userId = :userId
-//            AND up.enabled = true
-//            AND (up.expiresAt IS NULL OR up.expiresAt > CURRENT_TIMESTAMP)
-//
-//        UNION
-//
-//        SELECT rp.resourceId
-//        FROM UserRole ur
-//        JOIN RolePermition rp ON ur.roleId = rp.roleId
-//        WHERE ur.userId = :userId
-//            AND ur.enabled = true
-//            AND (ur.expiresAt IS NULL OR ur.expiresAt > CURRENT_TIMESTAMP)
-//            AND rp.enabled = true
-//            AND (rp.expiresAt IS NULL OR rp.expiresAt > CURRENT_TIMESTAMP)
-//    )
-//    ORDER BY r.name ASC
-//    """)
-//    List<ResourceAccess> findAllByUserId(@Param("userId") UUID userId);
+
+    @Query("""
+    SELECT new com.example.ztna_server.dto.internal.ResourceAccess(
+        r.id, r.name, r.type, r.description, r.enabled
+    )
+    FROM Resource r
+    WHERE r.id IN (
+        SELECT r2.id
+        FROM Resource r2
+        JOIN r2.rules rule
+        JOIN rule.users u
+        WHERE u.id = :userId
+          AND u.enabled = true
+          AND rule.enabled = true
+    )
+    AND r.enabled = true
+    ORDER BY r.name ASC
+    """)
+    List<ResourceAccess> findAllByUserId(@Param("userId") UUID userId);
 }

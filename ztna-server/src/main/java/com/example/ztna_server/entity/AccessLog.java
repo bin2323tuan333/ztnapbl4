@@ -28,10 +28,10 @@ public class AccessLog {
     private UUID userId;
 
     @Column(name = "username", nullable = false, length = 100)
-    private String username;                 // denormalize
+    private String username;
 
     @Column(name = "resource_id")
-    private UUID resourceId;                 // null nếu DENY trước khi biết resource
+    private UUID resourceId;
 
     @Column(name = "resource_name", length = 100)
     private String resourceName;
@@ -50,7 +50,7 @@ public class AccessLog {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "decision", length = 10, nullable = false)
-    private Decision decision;               // ALLOW / DENY
+    private Decision decision;
 
     @Column(name = "reason", length = 255)
     private String reason;

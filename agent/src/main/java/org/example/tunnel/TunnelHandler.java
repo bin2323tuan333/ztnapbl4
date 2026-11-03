@@ -13,6 +13,7 @@ import org.example.Factory;
 import org.example.cache.ClientOpenRegistry;
 import org.example.cache.PendingHttpRequest;
 import org.example.launcher.MysqlLauncher;
+import org.example.launcher.SshLauncher;
 import org.example.launcher.WebLauncher;
 import org.example.listener.LocalHandler;
 import org.example.listener.LocalServer;
@@ -110,6 +111,7 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
                     switch (type) {
                         case "web" -> new WebLauncher().launch(port);
                         case "mysql" -> new MysqlLauncher().launch(port);
+                        case "ssh" -> new SshLauncher().launch(port);
                     }
                 }
             } catch (Exception e) {

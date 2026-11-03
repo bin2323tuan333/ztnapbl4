@@ -4,7 +4,7 @@ import '../styles/OverviewPage.css'; // <-- Dòng này cực kỳ quan trọng
 
 const OverviewPage = () => {
     return (
-        <div className="ov-page"> {/* Nhớ bọc ngoài cùng bằng thẻ div có class ov-page */}
+        <div className="ov-page">
             <HeroSection />
             <FeaturesSection />
         </div>
