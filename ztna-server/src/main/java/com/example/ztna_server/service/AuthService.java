@@ -31,14 +31,13 @@ public class AuthService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final AuditService auditService;          // <-- thêm
+    private final AuditService auditService;
 
     public AuthResponse login(LoginRequest request) {
         String ip = getClientIp();
 
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> {
-                    // Login thất bại – user không tồn tại
                     auditService.log(
                             null,
                             request.getUsername(),
@@ -52,7 +51,6 @@ public class AuthService {
                 });
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            // Login thất bại – sai mật khẩu
             auditService.log(
                     user.getId(),
                     user.getUsername(),
@@ -71,7 +69,6 @@ public class AuthService {
 
         userService.updateLastLogin(user.getId());
 
-        // Login thành công
         auditService.log(
                 user.getId(),
                 user.getUsername(),
@@ -121,7 +118,6 @@ public class AuthService {
                         refreshToken -> {
                             refreshTokenRepository.delete(refreshToken);
 
-                            // Logout thành công
                             auditService.log(
                                     id,
                                     SecurityUtils.currentUsername(),
@@ -148,7 +144,6 @@ public class AuthService {
         User user = dbToken.getUser();
         String newAccessToken = jwtService.generateAccessToken(user);
 
-        // Ghi audit
         auditService.log(
                 user.getId(),
                 user.getUsername(),
@@ -167,7 +162,6 @@ public class AuthService {
         refreshTokenRepository.deleteAll();
     }
 
-    // ───────────────────────── Helper ─────────────────────────
     private String getClientIp() {
         try {
             ServletRequestAttributes attrs =

@@ -1,5 +1,5 @@
 import { Monitor, Database, Globe, Terminal } from 'lucide-react';
-import type { Resource } from '@/shared/types/model/Resource';
+import type { Resource } from '../types';
 import '../styles/ResourceCard.css';
 
 interface Props {
@@ -8,11 +8,12 @@ interface Props {
 }
 
 export const ResourceCard = ({ resource, onClick }: Props) => {
-
     const getIcon = () => {
-        switch (resource.type.toLowerCase()) {
+        switch (resource.type) {
             case 'ssh': return <Terminal size={22} />;
-            case 'mysql': return <Database size={22} />;
+            case 'mysql':
+            case 'postgres':
+            case 'redis': return <Database size={22} />;
             case 'web': return <Globe size={22} />;
             default: return <Monitor size={22} />;
         }
@@ -32,9 +33,8 @@ export const ResourceCard = ({ resource, onClick }: Props) => {
                         {resource.name}
                     </h3>
                 </div>
-
-                <span className={`type-badge type-${resource.type.toLowerCase()}`}>
-                    {resource.type}
+                <span className={`type-badge type-${resource.type}`}>
+                    {resource.type.toUpperCase()}
                 </span>
             </div>
 

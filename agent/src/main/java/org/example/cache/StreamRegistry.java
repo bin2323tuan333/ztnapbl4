@@ -8,7 +8,6 @@ import java.util.concurrent.*;
 public class StreamRegistry {
     private final Map<String, Channel> streams = new ConcurrentHashMap<>();
 
-
     public void register(String streamId, Channel channel) {
         streams.put(streamId, channel);
     }

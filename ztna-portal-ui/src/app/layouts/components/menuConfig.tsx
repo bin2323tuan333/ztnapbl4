@@ -29,11 +29,8 @@ export const ADMIN_MENU: MenuItem[] = [
         label: 'Quản lý danh tính',
         icon: <Users size={20} />,
         children: [
-            { label: 'Người dùng', path: '/users' },
             { label: 'Quản trị viên', path: '/users?role=ADMIN' },
-            { label: 'Người giám sát', path: '/users?role=SUPERVISOR' },
             { label: 'Người dùng thường', path: '/users?role=USER' },
-            { label: 'Vai trò', path: '/roles' },
         ],
     },
 
@@ -60,15 +57,6 @@ export const ADMIN_MENU: MenuItem[] = [
         children: [
             { label: 'Log truy cập', path: '/network-logs' },
             { label: 'Log kiểm toán', path: '/audit-logs' },
-        ],
-    },
-
-    {
-        label: 'Cài đặt',
-        icon: <Settings size={20} />,
-        children: [
-            { label: 'Cấu hình chung', path: '/settings/general' },
-            { label: 'Bảo mật & Chính sách', path: '/settings/security' },
         ],
     },
 ];

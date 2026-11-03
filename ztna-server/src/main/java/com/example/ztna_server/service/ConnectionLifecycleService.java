@@ -33,7 +33,6 @@ public class ConnectionLifecycleService {
 
     public void register(String connectorId, Channel channel) {
         if (channel == null || !channel.isActive()) {
-            log.warn("[ConnLifecycle] register: channel null/inactive for {}", connectorId);
             auditService.log(
                     "CONNECTOR_ONLINE",          
                     TargetType.CONNECTOR,
@@ -46,13 +45,11 @@ public class ConnectionLifecycleService {
 
         Channel old = connectionRegister.getChannel(connectorId);
         if (old != null && old != channel && old.isActive()) {
-            log.warn("[ConnLifecycle] {} reconnect — đóng channel cũ", connectorId);
             old.close();
         }
 
         connectionRegister.put(connectorId, channel);
         connectionRegister.markAlive(connectorId);
-        log.info("[ConnLifecycle] Registered {}", connectorId);
     }
 
     public Channel getChannel(String connectorId) {

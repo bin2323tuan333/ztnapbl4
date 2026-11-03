@@ -21,8 +21,8 @@ export const router = createBrowserRouter([
     {
         element: <PublicLayout />,
         children: [
-            { path: '/', element: <OverviewPage /> },
-            { path: '/login', element: <LoginPage /> },
+            { path: '', element: <OverviewPage /> },
+            { path: 'login', element: <LoginPage /> },
         ]
     },
 
@@ -32,7 +32,7 @@ export const router = createBrowserRouter([
             {
                 element: <UserLayout />,
                 children: [
-                    { path: '/portal', element: <PortalPage /> },
+                    { path: 'portal', element: <PortalPage /> },
                 ]
             }
         ]

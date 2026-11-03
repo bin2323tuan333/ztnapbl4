@@ -25,14 +25,12 @@ public class RoutingManager {
 
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
-        log.info("[ROUTING-MANAGER] Khởi động: Đang load dữ liệu từ Database vào Routing Table...");
         refreshRoutingTable();
     }
 
     @Scheduled(fixedDelay = 60000)
     @Transactional(readOnly = true)
     public synchronized void refreshRoutingTable() {
-        log.info("[ROUTING-MANAGER] Bắt đầu quét DB để làm mới Routing Table...");
         List<Resource> activeResources = resourceRepository.findAllByEnabledTrueAndConnectorEnabledTrue();
 
         Map<String, List<Resource>> byConnector = activeResources.stream()
@@ -56,7 +54,5 @@ public class RoutingManager {
 
             routingTable.loadRouting(connectorId, appList);
         });
-
-        log.info("[ROUTING-MANAGER] Đã load xong {} apps từ DB vào Cache", activeResources.size());
     }
 }
