@@ -12,11 +12,11 @@ import { PortalPage } from '@/features/portal';
 import { Dashboard } from '@/features/dashboard';
 import { ReportsPage } from '@/features/reports';
 import { ResourcesPage } from '@/features/resources';
-import { NetworkLogsPage } from '@/features/network-log';
 import { UsersPage, RolesPage } from '@/features/identity';
 import { ConnectorsPage } from '@/features/connectors';
 import { RulesPage } from '@/features/rules';
 import { AuditLogsPage } from '@/features/audit-log';
+import { AccessLogsPage } from '@/features/access-log';
 
 export const router = createBrowserRouter([
     {
@@ -49,7 +49,7 @@ export const router = createBrowserRouter([
                     { path: 'dashboard', element: <Dashboard /> },
                     { path: 'reports', element: <ReportsPage /> },
                     { path: 'resources', element: <ResourcesPage /> },
-                    { path: 'network-logs', element: <NetworkLogsPage /> },
+                    { path: 'network-logs', element: <AccessLogsPage /> },
                     { path: 'audit-logs', element: <AuditLogsPage /> },
                     { path: 'users', element: <UsersPage /> },
                     { path: 'roles', element: <RolesPage /> },
