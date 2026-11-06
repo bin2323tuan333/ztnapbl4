@@ -20,6 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+
 @Slf4j
 @Component
 @Scope("prototype")
@@ -93,6 +96,9 @@ public class ResourceWsHandler extends SimpleChannelInboundHandler<WebSocketFram
         HttpResFrame res = HttpResFrame.ok(reqId,"");
         ctx.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(res.encode())));
         log.info("[Gateway] HTTP_ACCESS OK cho reqId={}, uid={}", reqId, uid);
+
+        String ip = clientIp(ctx);
+
     }
 
     private void handleResourceAccess(ChannelHandlerContext ctx, ByteBuf buf) {
@@ -103,6 +109,8 @@ public class ResourceWsHandler extends SimpleChannelInboundHandler<WebSocketFram
 
         String reqId = req.getRequestId();
         String appId = req.getAppId();
+
+
 
         String uid = this.userId;
         if (uid == null) {
@@ -116,6 +124,9 @@ public class ResourceWsHandler extends SimpleChannelInboundHandler<WebSocketFram
             return;
         }
         log.info("[Gateway] RESOURCE_ACCESS cho appId={}, reqId={}, streamId={}", appId, reqId, session.getStreamId());
+
+
+        String ip = clientIp(ctx);
     }
 
     private void sendHttpFail(ChannelHandlerContext ctx, String reqId, byte status, String reason) {
@@ -150,5 +161,13 @@ public class ResourceWsHandler extends SimpleChannelInboundHandler<WebSocketFram
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("[User] Lỗi xử lý frame (bỏ qua): {}", cause.getMessage());
+    }
+
+    private static String clientIp(ChannelHandlerContext ctx) {
+        SocketAddress addr = ctx.channel().remoteAddress();
+        if (addr instanceof InetSocketAddress isa && isa.getAddress() != null) {
+            return isa.getAddress().getHostAddress();
+        }
+        return "unknown";
     }
 }

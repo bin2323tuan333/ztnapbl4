@@ -1,7 +1,7 @@
 package com.example.ztna_server.protocol.frames;
 
 
-import com.example.ztna_server.dto.App;
+import com.example.ztna_server.routes.App;
 import com.example.ztna_server.protocol.Frame;
 import com.example.ztna_server.protocol.FrameType;
 

@@ -1,6 +1,5 @@
 package com.example.ztna_server.routes;
 
-import com.example.ztna_server.dto.App;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -13,10 +12,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 public class RoutingTable {
-//    resourceId → AppRoute{connectorId, App}
+//  [resourceId] → AppRoute{connectorId, App}
     private final Map<String, AppRoute> routes = new ConcurrentHashMap<>();
 
-//    connectorId → Set<resourceId>
+//  [connectorId] → Set<resourceId>
     private final Map<String, Set<String>> connectorIndex = new ConcurrentHashMap<>();
 
 

@@ -1,6 +1,6 @@
 package com.example.ztna_server.service;
 
-import com.example.ztna_server.dto.App;
+import com.example.ztna_server.routes.App;
 import com.example.ztna_server.dto.request.ResourceRequest;
 import com.example.ztna_server.dto.response.resource.AdminResourceDetailResponse;
 import com.example.ztna_server.dto.response.resource.AdminResourceSummaryResponse;
@@ -13,10 +13,9 @@ import com.example.ztna_server.mapper.ResourceMapper;
 import com.example.ztna_server.protocol.frames.RoutingResFrame;
 import com.example.ztna_server.repository.ConnectorRepository;
 import com.example.ztna_server.repository.ResourceRepository;
-import com.example.ztna_server.routes.ConnectionRegister;
+import com.example.ztna_server.routes.ConnecterRegister;
 import com.example.ztna_server.routes.RoutingManager;
 import com.example.ztna_server.routes.RoutingTable;
-import com.example.ztna_server.security.SecurityUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -38,7 +37,7 @@ import java.util.UUID;
 public class AdminResourceService {
     private final ResourceRepository resourceRepository;
     private final ConnectorRepository connectorRepository;
-    private final ConnectionRegister connectionRegister;
+    private final ConnecterRegister connecterRegister;
     private final RoutingManager routingManager;
     private final RoutingTable routingTable;
     private final ResourceMapper resourceMapper;
@@ -183,7 +182,7 @@ public class AdminResourceService {
         routingManager.refreshRoutingTable();
         for (UUID cid : connectorIds) {
             String key = cid.toString();
-            Channel channel = connectionRegister.getChannel(key);
+            Channel channel = connecterRegister.getChannel(key);
             if (channel == null || !channel.isActive()) continue;
 
             List<App> apps = routingTable.getAppsByConnector(key);

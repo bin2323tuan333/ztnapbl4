@@ -1,13 +1,12 @@
 package com.example.ztna_server.service;
 
-import com.example.ztna_server.dto.App;
+import com.example.ztna_server.routes.App;
 import com.example.ztna_server.entity.User;
 import com.example.ztna_server.enums.Decision;
 import com.example.ztna_server.protocol.frames.CloseFrame;
 import com.example.ztna_server.protocol.frames.ConnectFrame;
 import com.example.ztna_server.protocol.frames.DataFrame;
 import com.example.ztna_server.protocol.frames.HttpResFrame;
-import com.example.ztna_server.repository.RuleRepository;
 import com.example.ztna_server.repository.UserRepository;
 import com.example.ztna_server.routes.*;
 import io.netty.buffer.ByteBuf;
@@ -26,7 +25,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SessionLifecycleService {
     private final SessionManager sessionManager;
-    private final ConnectionRegister connectionRegister;
+    private final ConnecterRegister connecterRegister;
     private final RoutingTable routingTable;
     private final AccessLogService accessLogService;
     private final UserRepository userRepository;
@@ -56,7 +55,7 @@ public class SessionLifecycleService {
         String connectorId = route.getConnectorId();
         App app = route.getApp();
 
-        Channel connCh = connectionRegister.getChannel(connectorId);
+        Channel connCh = connecterRegister.getChannel(connectorId);
         if (connCh == null || !connCh.isActive()) {
             log.warn("[Lifecycle] Connector {} offline", connectorId);
 

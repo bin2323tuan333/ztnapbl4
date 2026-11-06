@@ -1,6 +1,6 @@
 package com.example.ztna_server.netty;
 
-import com.example.ztna_server.dto.App;
+import com.example.ztna_server.routes.App;
 import com.example.ztna_server.entity.Connector;
 import com.example.ztna_server.protocol.*;
 import com.example.ztna_server.protocol.frames.*;

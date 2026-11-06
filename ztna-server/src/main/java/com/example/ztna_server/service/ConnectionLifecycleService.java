@@ -1,7 +1,7 @@
 package com.example.ztna_server.service;
 
 import com.example.ztna_server.enums.TargetType;
-import com.example.ztna_server.routes.ConnectionRegister;
+import com.example.ztna_server.routes.ConnecterRegister;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -9,17 +9,17 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 public class ConnectionLifecycleService {
-    private final ConnectionRegister connectionRegister;
+    private final ConnecterRegister connecterRegister;
     private final AuditService auditService;
 
-    public ConnectionLifecycleService(ConnectionRegister connectionRegister, AuditService auditService) {
-        this.connectionRegister = connectionRegister;
+    public ConnectionLifecycleService(ConnecterRegister connecterRegister, AuditService auditService) {
+        this.connecterRegister = connecterRegister;
         this.auditService = auditService;
     }
 
     public void disconnect(String connectorId) {
-        Channel channel = connectionRegister.getChannel(connectorId);
-        connectionRegister.remove(connectorId);
+        Channel channel = connecterRegister.getChannel(connectorId);
+        connecterRegister.remove(connectorId);
         auditService.log(
                 "CONNECTOR_OFFLINE",
                 TargetType.CONNECTOR,
@@ -43,25 +43,25 @@ public class ConnectionLifecycleService {
             return;
         }
 
-        Channel old = connectionRegister.getChannel(connectorId);
+        Channel old = connecterRegister.getChannel(connectorId);
         if (old != null && old != channel && old.isActive()) {
             old.close();
         }
 
-        connectionRegister.put(connectorId, channel);
-        connectionRegister.markAlive(connectorId);
+        connecterRegister.put(connectorId, channel);
+        connecterRegister.markAlive(connectorId);
     }
 
     public Channel getChannel(String connectorId) {
-        return connectionRegister.getChannel(connectorId);
+        return connecterRegister.getChannel(connectorId);
     }
 
     public void markAlive(String connectorId) {
-        connectionRegister.markAlive(connectorId);
+        connecterRegister.markAlive(connectorId);
     }
 
     public boolean isOnline(String connectorId) {
-        return connectionRegister.isOnline(connectorId);
+        return connecterRegister.isOnline(connectorId);
     }
 
 }

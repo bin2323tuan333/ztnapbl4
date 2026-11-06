@@ -16,34 +16,29 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class AccessLogService {
-
     private final AccessLogRepository accessLogRepository;
 
-    // ───────────────────────── Ghi log ─────────────────────────
-
     @Transactional
-    public void log(UUID requestId,
-                    UUID userId,
-                    String username,
+    public void log(UUID userId,
+                    String userIp,
+                    String userName,
                     UUID resourceId,
                     String resourceName,
+                    String resourceHost,
                     UUID connectorId,
-                    String path,
-                    String method,
-                    String clientIp,
+                    String connectorName,
                     Decision decision,
                     String reason) {
 
         AccessLog log = AccessLog.builder()
-                .requestId(requestId)
                 .userId(userId)
-                .username(username)
+                .userIp(userIp)
+                .userName(userName)
                 .resourceId(resourceId)
                 .resourceName(resourceName)
+                .resourceHost(resourceHost)
                 .connectorId(connectorId)
-                .path(path)
-                .method(method)
-                .clientIp(clientIp)
+                .connectorName(connectorName)
                 .decision(decision)
                 .reason(reason)
                 .build();
@@ -51,36 +46,35 @@ public class AccessLogService {
         accessLogRepository.save(log);
     }
 
-    // ───────────────────────── Query ─────────────────────────
 
-    @Transactional(readOnly = true)
-    public Page<AccessLogResponse> search(String username,
-                                          String resourceName,
-                                          Decision decision,
-                                          Instant from,
-                                          Instant to,
-                                          Pageable pageable) {
+//    @Transactional(readOnly = true)
+//    public Page<AccessLogResponse> search(String username,
+//                                          String resourceName,
+//                                          Decision decision,
+//                                          Instant from,
+//                                          Instant to,
+//                                          Pageable pageable) {
+//
+//        return accessLogRepository
+//                .search(username, resourceName, decision, from, to, pageable)
+//                .map(this::toResponse);
+//    }
 
-        return accessLogRepository
-                .search(username, resourceName, decision, from, to, pageable)
-                .map(this::toResponse);
-    }
-
-    private AccessLogResponse toResponse(AccessLog log) {
-        return AccessLogResponse.builder()
-                .id(log.getId())
-                .requestId(log.getRequestId())
-                .userId(log.getUserId())
-                .username(log.getUsername())
-                .resourceId(log.getResourceId())
-                .resourceName(log.getResourceName())
-                .connectorId(log.getConnectorId())
-                .path(log.getPath())
-                .method(log.getMethod())
-                .clientIp(log.getClientIp())
-                .decision(log.getDecision())
-                .reason(log.getReason())
-                .createdAt(log.getCreatedAt())
-                .build();
-    }
+//    private AccessLogResponse toResponse(AccessLog log) {
+//        return AccessLogResponse.builder()
+//                .id(log.getId())
+//                .requestId(log.getRequestId())
+//                .userId(log.getUserId())
+//                .username(log.getUsername())
+//                .resourceId(log.getResourceId())
+//                .resourceName(log.getResourceName())
+//                .connectorId(log.getConnectorId())
+//                .path(log.getPath())
+//                .method(log.getMethod())
+//                .clientIp(log.getClientIp())
+//                .decision(log.getDecision())
+//                .reason(log.getReason())
+//                .createdAt(log.getCreatedAt())
+//                .build();
+//    }
 }

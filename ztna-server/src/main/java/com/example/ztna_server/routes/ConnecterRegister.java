@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
-public class ConnectionRegister {
+public class ConnecterRegister {
     // connectorId → Channel
     private final Map<String, Channel> channels = new ConcurrentHashMap<>();
 

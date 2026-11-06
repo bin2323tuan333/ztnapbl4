@@ -16,19 +16,18 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 public class AccessLog {
-
     @Id
     @GeneratedValue
     private UUID id;
 
-    @Column(name = "request_id", nullable = false, unique = true)
-    private UUID requestId;
-    
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column(name = "username", nullable = false, length = 100)
-    private String username;
+    @Column(name = "user_ip", nullable = false)
+    private String userIp;
+
+    @Column(name = "user_name", nullable = false, length = 100)
+    private String userName;
 
     @Column(name = "resource_id")
     private UUID resourceId;
@@ -36,23 +35,20 @@ public class AccessLog {
     @Column(name = "resource_name", length = 100)
     private String resourceName;
 
-    @Column(name = "connector_id")
+    @Column(name = "resource_host", length = 100)
+    private String resourceHost;
+
+    @Column(name = "connector_id", nullable = false)
     private UUID connectorId;
 
-    @Column(name = "path", length = 500)
-    private String path;
-
-    @Column(name = "method", length = 10)
-    private String method;
-
-    @Column(name = "client_ip", length = 45)
-    private String clientIp;
+    @Column(name = "connector_name", nullable = false)
+    private String connectorName;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "decision", length = 10, nullable = false)
     private Decision decision;
 
-    @Column(name = "reason", length = 255)
+    @Column(name = "reason")
     private String reason;
 
     @Column(name = "created_at", nullable = false)
