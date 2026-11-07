@@ -1,20 +1,17 @@
 import { getRequest } from '@/shared/utils/apiClient';
 
-/** Khớp enum Decision phía backend */
 export type Decision = 'ALLOW' | 'DENY';
 
-/** Khớp AccessLogResponse */
 export interface AccessLog {
     id: string;
-    requestId: string | null;
     userId: string | null;
-    username: string;
+    userName: string | null;
+    userIp: string | null;
     resourceId: string | null;
     resourceName: string | null;
+    resourceHost: string | null;
     connectorId: string | null;
-    path: string | null;
-    method: string | null;
-    clientIp: string | null;
+    connectorName: string | null;
     decision: Decision | string;
     reason: string | null;
     createdAt: string;

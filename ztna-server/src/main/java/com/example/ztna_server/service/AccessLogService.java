@@ -47,34 +47,33 @@ public class AccessLogService {
     }
 
 
-//    @Transactional(readOnly = true)
-//    public Page<AccessLogResponse> search(String username,
-//                                          String resourceName,
-//                                          Decision decision,
-//                                          Instant from,
-//                                          Instant to,
-//                                          Pageable pageable) {
-//
-//        return accessLogRepository
-//                .search(username, resourceName, decision, from, to, pageable)
-//                .map(this::toResponse);
-//    }
+    @Transactional(readOnly = true)
+    public Page<AccessLogResponse> search(String username,
+                                          String resourceName,
+                                          Decision decision,
+                                          Instant from,
+                                          Instant to,
+                                          Pageable pageable) {
 
-//    private AccessLogResponse toResponse(AccessLog log) {
-//        return AccessLogResponse.builder()
-//                .id(log.getId())
-//                .requestId(log.getRequestId())
-//                .userId(log.getUserId())
-//                .username(log.getUsername())
-//                .resourceId(log.getResourceId())
-//                .resourceName(log.getResourceName())
-//                .connectorId(log.getConnectorId())
-//                .path(log.getPath())
-//                .method(log.getMethod())
-//                .clientIp(log.getClientIp())
-//                .decision(log.getDecision())
-//                .reason(log.getReason())
-//                .createdAt(log.getCreatedAt())
-//                .build();
-//    }
+        return accessLogRepository
+                .search(username, resourceName, decision, from, to, pageable)
+                .map(this::toResponse);
+    }
+
+    private AccessLogResponse toResponse(AccessLog log) {
+        return AccessLogResponse.builder()
+                .id(log.getId())
+                .userId(log.getUserId())
+                .userIp(log.getUserIp())
+                .userName(log.getUserName())
+                .resourceId(log.getResourceId())
+                .resourceName(log.getResourceName())
+                .resourceHost(log.getResourceHost())
+                .connectorId(log.getConnectorId())
+                .connectorName(log.getConnectorName())
+                .decision(log.getDecision())
+                .reason(log.getReason())
+                .createdAt(log.getCreatedAt())
+                .build();
+    }
 }

@@ -164,8 +164,7 @@ public class AuthService {
 
     private String getClientIp() {
         try {
-            ServletRequestAttributes attrs =
-                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attrs == null) return "unknown";
 
             HttpServletRequest request = attrs.getRequest();

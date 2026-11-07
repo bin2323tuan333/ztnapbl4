@@ -30,6 +30,6 @@ public final class SecurityUtils {
         if (auth == null || auth.getPrincipal() == null) {
             return "SYSTEM";
         }
-        return auth.getName(); // hoặc lấy từ UserDetails nếu có
+        return auth.getName();
     }
 }

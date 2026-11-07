@@ -232,8 +232,8 @@ export const AccessLogsPage = () => {
                                 <th>Thời gian</th>
                                 <th>User</th>
                                 <th>Resource</th>
-                                <th>Method</th>
-                                <th>Path</th>
+                                <th>Connector</th>
+                                <th>Host</th>
                                 <th>IP</th>
                                 <th>Quyết định</th>
                                 <th>Lý do</th>
@@ -261,7 +261,7 @@ export const AccessLogsPage = () => {
                                         <td>
                                             <div className="access-actor">
                                                 <span className="access-actor-name">
-                                                    {log.username || '—'}
+                                                    {log.userName || '—'}
                                                 </span>
                                                 {log.userId && (
                                                     <span className="access-actor-id">
@@ -283,16 +283,25 @@ export const AccessLogsPage = () => {
                                             </div>
                                         </td>
                                         <td>
-                                            {log.method ? (
-                                                <span className="access-method">{log.method}</span>
+                                            {log.connectorName || log.connectorId ? (
+                                                <div className="access-actor">
+                                                    <span className="access-actor-name">
+                                                        {log.connectorName || '—'}
+                                                    </span>
+                                                    {log.connectorId && (
+                                                        <span className="access-actor-id">
+                                                            {log.connectorId.slice(0, 8)}…
+                                                        </span>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 '—'
                                             )}
                                         </td>
-                                        <td className="access-path" title={log.path ?? undefined}>
-                                            {log.path || '—'}
+                                        <td className="access-path" title={log.resourceHost ?? undefined}>
+                                            {log.resourceHost || '—'}
                                         </td>
-                                        <td className="access-mono">{log.clientIp || '—'}</td>
+                                        <td className="access-mono">{log.userIp || '—'}</td>
                                         <td>
                                             <span
                                                 className={`access-badge ${decisionBadgeClass(

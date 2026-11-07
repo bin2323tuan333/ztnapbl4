@@ -2,9 +2,11 @@ package com.example.ztna_server.service;
 
 import com.example.ztna_server.dto.response.AuditLogResponse;
 import com.example.ztna_server.entity.AuditLog;
+import com.example.ztna_server.entity.User;
 import com.example.ztna_server.enums.Action;
 import com.example.ztna_server.enums.TargetType;
 import com.example.ztna_server.repository.AuditLogRepository;
+import com.example.ztna_server.repository.UserRepository;
 import com.example.ztna_server.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,6 +22,7 @@ import java.util.UUID;
 public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public void log(UUID actorId,
@@ -45,7 +48,7 @@ public class AuditService {
         auditLogRepository.save(log);
     }
 
-    /** Overload khi đã đăng nhập */
+
     @Transactional
     public void log(String actionStr,
                     TargetType targetType,
@@ -53,10 +56,13 @@ public class AuditService {
                     String extraInfo,
                     String ipAddress) {
 
-        UUID actorId = SecurityUtils.currentUserId();
-        String actorUsername = SecurityUtils.currentUsername();
+        UUID userId = SecurityUtils.currentUserId();
+        User user = userRepository.findById(userId)
+                        .orElseThrow(() -> {
+                            return null;
+                        });
 
-        log(actorId, actorUsername, actionStr, targetType, targetId, extraInfo, ipAddress);
+        log(userId, user.getFullName(), actionStr, targetType, targetId, extraInfo, ipAddress);
     }
 
 
@@ -68,9 +74,6 @@ public class AuditService {
         }
     }
 
-    /**
-     * Dịch action chung → câu tiếng Việt cụ thể
-     */
     private String translateAction(Action action, String extraInfo) {
         String target = (extraInfo != null && !extraInfo.isBlank()) ? extraInfo : "";
 

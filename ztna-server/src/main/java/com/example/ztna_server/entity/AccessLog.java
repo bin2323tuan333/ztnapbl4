@@ -20,7 +20,7 @@ public class AccessLog {
     @GeneratedValue
     private UUID id;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id")
     private UUID userId;
 
     @Column(name = "user_ip", nullable = false)
@@ -38,17 +38,17 @@ public class AccessLog {
     @Column(name = "resource_host", length = 100)
     private String resourceHost;
 
-    @Column(name = "connector_id", nullable = false)
+    @Column(name = "connector_id")
     private UUID connectorId;
 
-    @Column(name = "connector_name", nullable = false)
+    @Column(name = "connector_name")
     private String connectorName;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "decision", length = 10, nullable = false)
     private Decision decision;
 
-    @Column(name = "reason")
+    @Column(name = "reason", nullable = false)
     private String reason;
 
     @Column(name = "created_at", nullable = false)

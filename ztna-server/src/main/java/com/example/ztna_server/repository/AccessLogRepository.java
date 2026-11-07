@@ -15,7 +15,7 @@ public interface AccessLogRepository extends JpaRepository<AccessLog, UUID> {
 
     @Query("""
         SELECT a FROM AccessLog a
-        WHERE (:username IS NULL OR LOWER(a.username) LIKE LOWER(CONCAT('%', :username, '%')))
+        WHERE (:username IS NULL OR LOWER(a.userName) LIKE LOWER(CONCAT('%', :username, '%')))
           AND (:resourceName IS NULL OR LOWER(a.resourceName) LIKE LOWER(CONCAT('%', :resourceName, '%')))
           AND (:decision IS NULL OR a.decision = :decision)
           AND (:from IS NULL OR a.createdAt >= :from)

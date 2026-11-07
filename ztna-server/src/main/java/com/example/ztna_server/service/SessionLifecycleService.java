@@ -1,5 +1,7 @@
 package com.example.ztna_server.service;
 
+import com.example.ztna_server.entity.Connector;
+import com.example.ztna_server.repository.ConnectorRepository;
 import com.example.ztna_server.routes.App;
 import com.example.ztna_server.entity.User;
 import com.example.ztna_server.enums.Decision;
@@ -17,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,23 +33,29 @@ public class SessionLifecycleService {
     private final RoutingTable routingTable;
     private final AccessLogService accessLogService;
     private final UserRepository userRepository;
+    private final ConnectorRepository connectorRepository;
 
-    public Session openSession(String reqId, String userId, String appId, Channel clientChannel) {
-        AppRoute route = routingTable.getAppRoute(appId);
+    public Session openSession(String reqId, String userId, String resourceId, Channel clientChannel) {
+        AppRoute route = routingTable.getAppRoute(resourceId);
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> {
+                    return null;
+                });
+
+        if (user == null) return null;
 
         if (route == null) {
-            log.warn("[Lifecycle] App không tồn tại: {}", appId);
+            log.warn("[Lifecycle] App không tồn tại: {}", resourceId);
 
             accessLogService.log(
-                    UUID.fromString(reqId),
                     UUID.fromString(userId),
-                    null,                   // username 
-                    UUID.fromString(appId),
-                    null,                   // resourceName
-                    null,                   // connectorId
-                    null,                   // path
-                    "CONNECT",
-                    null,                   // clientIp
+                    getIpAddress(clientChannel),
+                    user.getFullName(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
                     Decision.DENY,
                     "App không tồn tại"
             );
@@ -53,6 +63,15 @@ public class SessionLifecycleService {
         }
 
         String connectorId = route.getConnectorId();
+        Connector connector = connectorRepository.findById(UUID.fromString(connectorId))
+                .orElseThrow(() -> {
+                    return null;
+                });
+
+        if (connector == null) {
+            return null;
+        }
+
         App app = route.getApp();
 
         Channel connCh = connecterRegister.getChannel(connectorId);
@@ -60,17 +79,16 @@ public class SessionLifecycleService {
             log.warn("[Lifecycle] Connector {} offline", connectorId);
 
             accessLogService.log(
-                    UUID.fromString(reqId),
                     UUID.fromString(userId),
-                    null,
-                    UUID.fromString(appId),
+                    getIpAddress(clientChannel),
+                    user.getFullName(),
+                    UUID.fromString(app.getId()),
                     app.getName(),
+                    app.getHost(),
                     UUID.fromString(connectorId),
-                    null,
-                    "CONNECT",
-                    null,
+                    connector.getName(),
                     Decision.DENY,
-                    "Connector offline"
+                    "Connector mất kết nối"
             );
             return null;
         }
@@ -80,7 +98,7 @@ public class SessionLifecycleService {
         Session session = Session.builder()
                 .streamId(streamId)
                 .userId(userId)
-                .appId(appId)
+                .appId(resourceId)
                 .connectorId(connectorId)
                 .userChannel(clientChannel)
                 .wsChannel(connCh)
@@ -90,7 +108,7 @@ public class SessionLifecycleService {
 
         sessionManager.add(reqId, streamId, session);
 
-        ConnectFrame cf = new ConnectFrame(streamId, appId);
+        ConnectFrame cf = new ConnectFrame(streamId, resourceId);
         connCh.writeAndFlush(new BinaryWebSocketFrame(
                 Unpooled.wrappedBuffer(cf.encode())
         ));
@@ -103,20 +121,19 @@ public class SessionLifecycleService {
 
 
         accessLogService.log(
-                UUID.fromString(reqId),
                 UUID.fromString(userId),
-                username,
-                UUID.fromString(appId),
+                getIpAddress(clientChannel),
+                user.getFullName(),
+                UUID.fromString(app.getId()),
                 app.getName(),
+                app.getHost(),
                 UUID.fromString(connectorId),
-                null,
-                "CONNECT",
-                null,
+                "null",
                 Decision.ALLOW,
-                "Mở session thành công"
+                "Kết nối thành công"
         );
         
-        log.info("[Lifecycle] OPEN stream={} user={} app={} conn={}", streamId, userId, appId, connectorId);
+        log.info("[Lifecycle] OPEN stream={} user={} app={} conn={}", streamId, userId, resourceId, connectorId);
 
         return session;
     }
@@ -140,7 +157,6 @@ public class SessionLifecycleService {
         CloseFrame cf = new CloseFrame();
         cf.setStreamId(session.getStreamId());
 
-        // LƯU Ý: KHÔNG dùng addListener(ChannelFutureListener.CLOSE) ở đây
         userCh.writeAndFlush(new BinaryWebSocketFrame(
                 Unpooled.wrappedBuffer(cf.encode())
         ));
@@ -278,5 +294,17 @@ public class SessionLifecycleService {
                 HttpResFrame.STATUS_OK,
                 reason);
         sessionDisconnect(streamId, "CONNECT_FAILED: " + reason);
+    }
+
+    public static String getIpAddress(Channel channel) {
+        if (channel == null) {
+            return "Unknown";
+        }
+        SocketAddress socketAddress = channel.remoteAddress();
+        if (socketAddress instanceof InetSocketAddress) {
+            InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
+            return inetSocketAddress.getAddress().getHostAddress();
+        }
+        return socketAddress != null ? socketAddress.toString() : "Unknown";
     }
 }
