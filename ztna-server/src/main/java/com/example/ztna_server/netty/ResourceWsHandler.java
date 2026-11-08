@@ -120,7 +120,7 @@ public class ResourceWsHandler extends SimpleChannelInboundHandler<WebSocketFram
 
         Session session = sessionLifecycleService.openSession(req.getRequestId(), uid, appId, ctx.channel());
         if (session == null) {
-            sendResourceFail(ctx, reqId, "App không tồn tại hoặc Connector offline");
+            sendResourceFail(ctx, reqId, "Không thể mở ứng dụng: bạn không có quyền, tài khoản bị khóa, app không tồn tại hoặc connector offline");
             return;
         }
         log.info("[Gateway] RESOURCE_ACCESS cho appId={}, reqId={}, streamId={}", appId, reqId, session.getStreamId());
