@@ -2,6 +2,7 @@ package com.example.ztna_server.service;
 
 import com.example.ztna_server.entity.Connector;
 import com.example.ztna_server.repository.ConnectorRepository;
+import com.example.ztna_server.repository.ResourceRepository;
 import com.example.ztna_server.routes.App;
 import com.example.ztna_server.entity.User;
 import com.example.ztna_server.enums.Decision;
@@ -34,14 +35,11 @@ public class SessionLifecycleService {
     private final AccessLogService accessLogService;
     private final UserRepository userRepository;
     private final ConnectorRepository connectorRepository;
+    private final ResourceRepository resourceRepository;
 
     public Session openSession(String reqId, String userId, String resourceId, Channel clientChannel) {
         AppRoute route = routingTable.getAppRoute(resourceId);
-        User user = userRepository.findById(UUID.fromString(userId))
-                .orElseThrow(() -> {
-                    return null;
-                });
-
+        User user = userRepository.findById(UUID.fromString(userId)).orElse(null);
         if (user == null) return null;
 
         if (route == null) {
@@ -63,16 +61,49 @@ public class SessionLifecycleService {
         }
 
         String connectorId = route.getConnectorId();
-        Connector connector = connectorRepository.findById(UUID.fromString(connectorId))
-                .orElseThrow(() -> {
-                    return null;
-                });
-
+        Connector connector = connectorRepository.findById(UUID.fromString(connectorId)).orElse(null);
         if (connector == null) {
             return null;
         }
 
         App app = route.getApp();
+
+        // ───── Zero Trust: kiểm tra quyền trước khi mở kết nối ─────
+        // 1) Tài khoản bị khóa thì từ chối ngay, kể cả khi token cũ còn hạn
+        if (!Boolean.TRUE.equals(user.getEnabled())) {
+            log.warn("[Lifecycle] User {} đã bị khóa, từ chối app {}", userId, resourceId);
+            accessLogService.log(
+                    user.getId(),
+                    getIpAddress(clientChannel),
+                    user.getFullName(),
+                    UUID.fromString(app.getId()),
+                    app.getName(),
+                    app.getHost(),
+                    UUID.fromString(connectorId),
+                    connector.getName(),
+                    Decision.DENY,
+                    "Tài khoản đã bị khóa"
+            );
+            return null;
+        }
+
+        // 2) User phải thuộc ít nhất một rule đang bật có chứa app này
+        if (resourceRepository.countAccess(user.getId(), UUID.fromString(resourceId)) == 0) {
+            log.warn("[Lifecycle] User {} không có quyền vào app {}", userId, resourceId);
+            accessLogService.log(
+                    user.getId(),
+                    getIpAddress(clientChannel),
+                    user.getFullName(),
+                    UUID.fromString(app.getId()),
+                    app.getName(),
+                    app.getHost(),
+                    UUID.fromString(connectorId),
+                    connector.getName(),
+                    Decision.DENY,
+                    "Không có quyền truy cập ứng dụng"
+            );
+            return null;
+        }
 
         Channel connCh = connecterRegister.getChannel(connectorId);
         if (connCh == null || !connCh.isActive()) {
@@ -128,7 +159,7 @@ public class SessionLifecycleService {
                 app.getName(),
                 app.getHost(),
                 UUID.fromString(connectorId),
-                "null",
+                connector.getName(),
                 Decision.ALLOW,
                 "Kết nối thành công"
         );

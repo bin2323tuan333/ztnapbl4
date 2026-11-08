@@ -43,4 +43,17 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
     ORDER BY r.name ASC
     """)
     List<ResourceAccess> findAllByUserId(@Param("userId") UUID userId);
+    // Kiểm tra quyền khi user mở app qua Agent: > 0 nghĩa là user thuộc ít nhất
+    // một rule đang bật có chứa app này (và app đang bật).
+    @Query("""
+    SELECT COUNT(r)
+    FROM Resource r
+    JOIN r.rules rule
+    JOIN rule.users u
+    WHERE r.id = :resourceId
+      AND u.id = :userId
+      AND rule.enabled = true
+      AND r.enabled = true
+    """)
+    long countAccess(@Param("userId") UUID userId, @Param("resourceId") UUID resourceId);
 }
