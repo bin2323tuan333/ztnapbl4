@@ -11,6 +11,7 @@ export const useRules = () => {
         setIsLoading(true);
         try {
             const data = await ruleApi.getRules();
+            console.log("Dữ liệu Rules từ API:", data);
             setRules(data);
             setError('');
         } catch (err: any) {

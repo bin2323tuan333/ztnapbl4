@@ -42,6 +42,9 @@ public class HttpHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
         String reqId = UUID.randomUUID().toString();
         Factory.pendingHttpRequest.put(reqId, ctx.channel(), appType, appId);
+        if (tunnelClient.channel == null || !tunnelClient.channel.isActive()) {
+            tunnelClient.connect();
+        }
         tunnelClient.sendHttpAccess(reqId, appId, jwt);
     }
 

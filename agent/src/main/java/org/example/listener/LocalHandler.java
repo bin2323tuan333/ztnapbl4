@@ -52,6 +52,7 @@ public class LocalHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
+        if (tunnelClient.channel == null || !tunnelClient.channel.isActive()) ctx.channel().close();
         tunnelClient.sendStreamData(streamId, data);
     }
 

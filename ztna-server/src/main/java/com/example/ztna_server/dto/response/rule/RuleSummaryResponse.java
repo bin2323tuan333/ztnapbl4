@@ -22,4 +22,6 @@ public class RuleSummaryResponse {
 
     private Instant createdAt;
     private boolean enabled;
+
+    private Instant expiresAt;
 }

@@ -19,7 +19,7 @@ import java.net.URI;
 public class TunnelClient {
     private final AgentConfig agentConfig = Factory.agentConfig;
     private final EventLoopGroup tunnelGroup = Factory.tunnelGroup;
-    private volatile Channel channel;
+    public volatile Channel channel;
 
     public TunnelClient() {
         try {

@@ -28,9 +28,17 @@ export interface RuleDetail {
     name: string;
     description: string;
     createdAt: string;
+    expiresAt: string | null;
     enabled: boolean;
     users: UserInfo[];
     resources: ResourceInfo[];
+}
+
+export interface CreateRulePayload {
+    name: string;
+    description?: string;
+    enabled?: boolean;
+    expiresAt?: string;
 }
 
 export const ruleApi = {
@@ -41,9 +49,11 @@ export const ruleApi = {
     getRuleDetail: async (id: string): Promise<RuleDetail> => {
         return await getRequest(`/api/v1/admin/rules/${id}`);
     },
-    createRule: async (data: { name: string, description: string }): Promise<void> => {
+
+    createRule: async (data: CreateRulePayload): Promise<void> => {
         return await postRequest('/api/v1/admin/rules', data);
     },
+
     updateRuleUsers: async (id: string, userIds: string[]): Promise<void> => {
         return await putRequest(`/api/v1/admin/rules/${id}/users`, { userIds });
     },

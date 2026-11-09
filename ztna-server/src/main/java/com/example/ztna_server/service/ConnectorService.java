@@ -9,6 +9,7 @@ import com.example.ztna_server.entity.Connector;
 import com.example.ztna_server.enums.TargetType;
 import com.example.ztna_server.mapper.ConnectorMapper;
 import com.example.ztna_server.repository.ConnectorRepository;
+import com.example.ztna_server.routes.ConnecterRegister;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,9 +24,9 @@ public class ConnectorService {
 
     private final ConnectorRepository connectorRepository;
     private final ConnectorMapper connectorMapper;
-    private final AuditService auditService;  
+    private final AuditService auditService;
+    private final ConnecterRegister connecterRegister;
 
-    // --- GET ---
 
     @Transactional(readOnly = true)
     public List<ConnectorNameResponse> getConnectorsName() {
@@ -108,6 +109,10 @@ public class ConnectorService {
         connector.setEnabled(!connector.isEnabled());
         connector.setUpdatedAt(Instant.now());
 
+        if (!connector.isEnabled()) {
+            connecterRegister.remove(connector.getId().toString());
+        }
+
         Connector saved = connectorRepository.save(connector);
 
         // Audit log
@@ -127,10 +132,10 @@ public class ConnectorService {
         Connector connector = connectorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Connector không tồn tại"));
 
+        connecterRegister.remove(connector.getId().toString());
         String name = connector.getName();
         connectorRepository.deleteById(id);
 
-        // Audit log
         auditService.log(
                 "DELETE_CONNECTOR",
                 TargetType.CONNECTOR,

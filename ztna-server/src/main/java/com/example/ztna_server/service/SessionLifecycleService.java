@@ -68,9 +68,8 @@ public class SessionLifecycleService {
 
         App app = route.getApp();
 
-        // ───── Zero Trust: kiểm tra quyền trước khi mở kết nối ─────
-        // 1) Tài khoản bị khóa thì từ chối ngay, kể cả khi token cũ còn hạn
-        if (!Boolean.TRUE.equals(user.getEnabled())) {
+        // user bi khoa thi ko cho truy cap tiep
+        if (!user.getEnabled()) {
             log.warn("[Lifecycle] User {} đã bị khóa, từ chối app {}", userId, resourceId);
             accessLogService.log(
                     user.getId(),
@@ -87,7 +86,7 @@ public class SessionLifecycleService {
             return null;
         }
 
-        // 2) User phải thuộc ít nhất một rule đang bật có chứa app này
+        //User phải thuộc ít nhất một rule đang bật có chứa app này
         if (resourceRepository.countAccess(user.getId(), UUID.fromString(resourceId)) == 0) {
             log.warn("[Lifecycle] User {} không có quyền vào app {}", userId, resourceId);
             accessLogService.log(
@@ -105,6 +104,8 @@ public class SessionLifecycleService {
             return null;
         }
 
+
+        // neu dong connector thi ko cho truy cap tiep
         Channel connCh = connecterRegister.getChannel(connectorId);
         if (connCh == null || !connCh.isActive()) {
             log.warn("[Lifecycle] Connector {} offline", connectorId);
@@ -151,18 +152,18 @@ public class SessionLifecycleService {
                 .orElse("Unknown User");
 
 
-        accessLogService.log(
-                UUID.fromString(userId),
-                getIpAddress(clientChannel),
-                user.getFullName(),
-                UUID.fromString(app.getId()),
-                app.getName(),
-                app.getHost(),
-                UUID.fromString(connectorId),
-                connector.getName(),
-                Decision.ALLOW,
-                "Kết nối thành công"
-        );
+//        accessLogService.log(
+//                UUID.fromString(userId),
+//                getIpAddress(clientChannel),
+//                user.getFullName(),
+//                UUID.fromString(app.getId()),
+//                app.getName(),
+//                app.getHost(),
+//                UUID.fromString(connectorId),
+//                connector.getName(),
+//                Decision.ALLOW,
+//                "Kết nối thành công"
+//        );
         
         log.info("[Lifecycle] OPEN stream={} user={} app={} conn={}", streamId, userId, resourceId, connectorId);
 

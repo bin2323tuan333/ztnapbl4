@@ -12,7 +12,7 @@ interface Props {
     itemType: 'user' | 'resource';
 }
 
-export const EditRuleAssignmentModal = ({ isOpen, onClose, onSave, title, allItems, initialSelectedIds, itemType }: Props) => {
+export const EditRuleAssignmentModal = ({ isOpen, onClose, onSave, title, allItems, initialSelectedIds }: Props) => {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [searchLeft, setSearchLeft] = useState('');
     const [searchRight, setSearchRight] = useState('');
@@ -46,17 +46,57 @@ export const EditRuleAssignmentModal = ({ isOpen, onClose, onSave, title, allIte
         }
     };
 
-    const getItemName = (item: UserInfo | ResourceInfo) => 'username' in item ? item.username : item.name;
+    // ── Render nội dung giống RuleDetailModal ──
+    const renderItemContent = (item: UserInfo | ResourceInfo) => {
+        if ('username' in item) {
+            return (
+                <>
+                    <span style={{ fontWeight: 500 }}>{item.username}</span>{' '}
+                    <span style={{ color: '#94a3b8', fontSize: '12px' }}>({item.email})</span>
+                </>
+            );
+        }
+        return (
+            <>
+                <span style={{ fontWeight: 500 }}>{item.name}</span>{' '}
+                <span style={{ color: '#94a3b8', fontSize: '12px' }}>[{item.type}]</span>
+            </>
+        );
+    };
 
-    // Danh sách đã chọn (Cột Trái)
+    // Tìm theo cả username/name + email/type (vì đã hiển thị các field này)
+    const getSearchText = (item: UserInfo | ResourceInfo) =>
+        'username' in item
+            ? `${item.username} ${item.email ?? ''}`.toLowerCase()
+            : `${item.name} ${item.type ?? ''}`.toLowerCase();
+
     const selectedItems = allItems
         .filter(item => selectedIds.includes(item.id))
-        .filter(item => getItemName(item).toLowerCase().includes(searchLeft.toLowerCase()));
+        .filter(item => getSearchText(item).includes(searchLeft.toLowerCase()));
 
-    // Danh sách có sẵn (Cột Phải)
     const availableItems = allItems
         .filter(item => !selectedIds.includes(item.id))
-        .filter(item => getItemName(item).toLowerCase().includes(searchRight.toLowerCase()));
+        .filter(item => getSearchText(item).includes(searchRight.toLowerCase()));
+
+    // Style chung cho hàng, đồng bộ với detail
+    const rowStyle: React.CSSProperties = {
+        padding: '10px',
+        background: '#f8fafc',
+        border: '1px solid #e2e8f0',
+        borderRadius: '6px',
+        fontSize: '14px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+    };
+
+    const textStyle: React.CSSProperties = {
+        flex: 1,
+        minWidth: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+    };
 
     return (
         <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={onClose}>
@@ -75,9 +115,14 @@ export const EditRuleAssignmentModal = ({ isOpen, onClose, onSave, title, allIte
                         </div>
                         <div className="panel-list">
                             {selectedItems.map(item => (
-                                <div key={item.id} className="list-card selected-card" onClick={() => toggleSelection(item.id)}>
-                                    <span>{getItemName(item)}</span>
-                                    <X size={16} className="icon-remove" />
+                                <div
+                                    key={item.id}
+                                    style={rowStyle}
+                                    onClick={() => toggleSelection(item.id)}
+                                    title="Bấm để bỏ chọn"
+                                >
+                                    <span style={textStyle}>{renderItemContent(item)}</span>
+                                    <X size={16} style={{ color: '#ef4444', flexShrink: 0 }} />
                                 </div>
                             ))}
                             {selectedItems.length === 0 && <div className="empty-text">Chưa có dữ liệu.</div>}
@@ -92,9 +137,13 @@ export const EditRuleAssignmentModal = ({ isOpen, onClose, onSave, title, allIte
                         </div>
                         <div className="panel-list">
                             {availableItems.map(item => (
-                                <div key={item.id} className="list-card available-card" onClick={() => toggleSelection(item.id)}>
-                                    <div className="checkbox-custom"></div>
-                                    <span>{getItemName(item)}</span>
+                                <div
+                                    key={item.id}
+                                    style={rowStyle}
+                                    onClick={() => toggleSelection(item.id)}
+                                    title="Bấm để chọn"
+                                >
+                                    <span style={textStyle}>{renderItemContent(item)}</span>
                                 </div>
                             ))}
                             {availableItems.length === 0 && <div className="empty-text">Không tìm thấy kết quả.</div>}

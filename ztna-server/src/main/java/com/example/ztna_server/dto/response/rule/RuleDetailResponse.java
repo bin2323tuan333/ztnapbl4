@@ -21,6 +21,7 @@ public class RuleDetailResponse {
     private String name;
     private String description;
     private Instant createdAt;
+    private Instant expiresAt;
     private boolean enabled;
 
     private List<UserInfo> users;

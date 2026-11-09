@@ -37,13 +37,16 @@ public class Rule {
     @Builder.Default
     private Instant updatedAt = Instant.now();
 
+    @Column(name = "expires_at")
+    private Instant expiresAt;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "rule_users",
             joinColumns = @JoinColumn(name = "rule_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<User> users; // ĐỔI TỪ List SANG Set
+    private Set<User> users;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -51,5 +54,5 @@ public class Rule {
             joinColumns = @JoinColumn(name = "rule_id"),
             inverseJoinColumns = @JoinColumn(name = "resource_id")
     )
-    private Set<Resource> resources; // ĐỔI TỪ List SANG Set
+    private Set<Resource> resources;
 }

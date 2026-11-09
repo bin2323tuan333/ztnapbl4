@@ -54,24 +54,39 @@ public class RuleService {
             throw new RuntimeException("Tên Rule đã tồn tại!");
         }
 
+        // Validate: Ngày hết hạn (nếu có) phải ở tương lai
+        if (request.getExpiresAt() != null && request.getExpiresAt().isBefore(Instant.now())) {
+            throw new RuntimeException("Thời điểm hết hạn phải ở trong tương lai!");
+        }
+
         Rule rule = ruleMapper.toEntity(request);
-        rule.setEnabled(true);
+
+        rule.setName(request.getName().trim());
+        rule.setDescription(request.getDescription() != null ? request.getDescription().trim() : null);
+        rule.setEnabled(request.getEnabled() != null ? request.getEnabled() : true);
+
+        rule.setExpiresAt(request.getExpiresAt());
+
         rule.setCreatedAt(Instant.now());
         rule.setUpdatedAt(Instant.now());
 
         if (request.getUserIds() != null && !request.getUserIds().isEmpty()) {
             rule.setUsers(new HashSet<>(userRepository.findAllById(request.getUserIds())));
+        } else {
+            rule.setUsers(new HashSet<>());
         }
+
         if (request.getResourceIds() != null && !request.getResourceIds().isEmpty()) {
             rule.setResources(new HashSet<>(resourceRepository.findAllById(request.getResourceIds())));
+        } else {
+            rule.setResources(new HashSet<>());
         }
 
         Rule saved = ruleRepository.save(rule);
 
-        // Audit log
         auditService.log(
                 "CREATE_RULE",
-                TargetType.SYSTEM,          
+                TargetType.SYSTEM,
                 saved.getId().toString(),
                 saved.getName(),
                 null

@@ -259,44 +259,19 @@ export const AccessLogsPage = () => {
                                             {formatDateTime(log.createdAt)}
                                         </td>
                                         <td>
-                                            <div className="access-actor">
-                                                <span className="access-actor-name">
-                                                    {log.userName || '—'}
-                                                </span>
-                                                {log.userId && (
-                                                    <span className="access-actor-id">
-                                                        {log.userId.slice(0, 8)}…
-                                                    </span>
-                                                )}
-                                            </div>
+                                            <span className="access-actor-name">
+                                                {log.userName || '—'}
+                                            </span>
                                         </td>
                                         <td>
-                                            <div className="access-actor">
-                                                <span className="access-actor-name">
-                                                    {log.resourceName || '—'}
-                                                </span>
-                                                {log.resourceId && (
-                                                    <span className="access-actor-id">
-                                                        {log.resourceId.slice(0, 8)}…
-                                                    </span>
-                                                )}
-                                            </div>
+                                            <span className="access-actor-name">
+                                                {log.resourceName || '—'}
+                                            </span>
                                         </td>
                                         <td>
-                                            {log.connectorName || log.connectorId ? (
-                                                <div className="access-actor">
-                                                    <span className="access-actor-name">
-                                                        {log.connectorName || '—'}
-                                                    </span>
-                                                    {log.connectorId && (
-                                                        <span className="access-actor-id">
-                                                            {log.connectorId.slice(0, 8)}…
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                '—'
-                                            )}
+                                            <span className="access-actor-name">
+                                                {log.connectorName || '—'}
+                                            </span>
                                         </td>
                                         <td className="access-path" title={log.resourceHost ?? undefined}>
                                             {log.resourceHost || '—'}
