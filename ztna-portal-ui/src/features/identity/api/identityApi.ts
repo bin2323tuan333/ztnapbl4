@@ -17,47 +17,9 @@ export interface UpdateUserBody {
     role: UserRole;
 }
 
-// Khớp với SystemRoleResponse
-export interface RoleItem {
-    id: string;
-    name: string;          // mã role, vd DEV
-    displayName: string;   // tên hiển thị, vd "Lập trình viên"
-    description: string;
-    memberCount: number;
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface RoleBody {
-    name: string;
-    displayName: string;
-    description: string;
-}
-
-// Khớp với RoleMemberResponse
-export interface RoleMember {
-    userId: string;
-    username: string;
-    fullName: string;
-    roleId: string;
-    roleName: string;
-    grantedBy: string;
-    grantedAt: string;
-    expiresAt: string | null;
-    reason: string;
-    enabled: boolean;
-}
-
-export interface AssignRoleBody {
-    userId: string;
-    reason: string;
-    expiresAt: string | null;   // ISO, null = không hết hạn
-}
-
 // ───────────── API ─────────────
 
 const USERS = '/api/v1/admin/users';
-const ROLES = '/api/v1/admin/rules';
 
 export const userApi = {
     getAll: (): Promise<User[]> => getRequest(USERS),
@@ -67,14 +29,4 @@ export const userApi = {
     block: (id: string) => patchRequest(`${USERS}/${id}/block`),
     unblock: (id: string) => patchRequest(`${USERS}/${id}/unblock`),
     remove: (id: string) => deleteRequest(`${USERS}/${id}`),
-};
-
-export const roleApi = {
-    getAll: (): Promise<RoleItem[]> => getRequest(ROLES),
-    create: (body: RoleBody): Promise<RoleItem> => postRequest(ROLES, body),
-    update: (id: string, body: RoleBody): Promise<RoleItem> => putRequest(`${ROLES}/${id}`, body),
-    remove: (id: string) => deleteRequest(`${ROLES}/${id}`),
-    getMembers: (id: string): Promise<RoleMember[]> => getRequest(`${ROLES}/${id}/users`),
-    assign: (id: string, body: AssignRoleBody) => postRequest(`${ROLES}/${id}/users`, body),
-    unassign: (id: string, userId: string) => deleteRequest(`${ROLES}/${id}/users/${userId}`),
 };

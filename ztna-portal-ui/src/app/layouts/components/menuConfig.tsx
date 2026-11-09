@@ -29,7 +29,9 @@ export const ADMIN_MENU: MenuItem[] = [
         label: 'Quản lý danh tính',
         icon: <Users size={20} />,
         children: [
+            { label: 'Tất cả người dùng', path: '/users' },
             { label: 'Quản trị viên', path: '/users?role=ADMIN' },
+            { label: 'Người giám sát', path: '/users?role=SUPERVISOR' },
             { label: 'Người dùng thường', path: '/users?role=USER' },
         ],
     },
