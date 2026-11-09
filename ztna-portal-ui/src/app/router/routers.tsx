@@ -12,7 +12,7 @@ import { PortalPage } from '@/features/portal';
 import { Dashboard } from '@/features/dashboard';
 import { ReportsPage } from '@/features/reports';
 import { ResourcesPage } from '@/features/resources';
-import { UsersPage, RolesPage } from '@/features/identity';
+import { UsersPage } from '@/features/identity';
 import { ConnectorsPage } from '@/features/connectors';
 import { RulesPage } from '@/features/rules';
 import { AuditLogsPage } from '@/features/audit-log';
@@ -45,14 +45,12 @@ export const router = createBrowserRouter([
             {
                 element: <AdminLayout />,
                 children: [
-                    { index: true, element: <Navigate to="dashboard" replace /> },
                     { path: 'dashboard', element: <Dashboard /> },
                     { path: 'reports', element: <ReportsPage /> },
                     { path: 'resources', element: <ResourcesPage /> },
                     { path: 'network-logs', element: <AccessLogsPage /> },
                     { path: 'audit-logs', element: <AuditLogsPage /> },
                     { path: 'users', element: <UsersPage /> },
-                    { path: 'roles', element: <RolesPage /> },
                     { path: 'connectors', element: <ConnectorsPage /> },
                     { path: 'rules', element: <RulesPage /> },
                 ],
