@@ -23,6 +23,8 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
     Optional<Resource> findByName(String name);
     boolean existsByName(String name);
     long countByConnectorId(UUID connectorId);
+    // Dashboard: đếm ứng dụng đang bật (true) / tắt (false)
+    long countByEnabled(Boolean enabled);
 
 
     @Query("""
@@ -53,6 +55,7 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
     WHERE r.id = :resourceId
       AND u.id = :userId
       AND rule.enabled = true
+      AND (rule.expiresAt IS NULL OR rule.expiresAt > CURRENT_TIMESTAMP)
       AND r.enabled = true
     """)
     long countAccess(@Param("userId") UUID userId, @Param("resourceId") UUID resourceId);
