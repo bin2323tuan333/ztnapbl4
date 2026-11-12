@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -87,7 +88,7 @@ public class SessionLifecycleService {
         }
 
         //User phải thuộc ít nhất một rule đang bật có chứa app này
-        if (resourceRepository.countAccess(user.getId(), UUID.fromString(resourceId)) == 0) {
+        if (resourceRepository.countAccess(user.getId(), UUID.fromString(resourceId), Instant.now()) == 0) {
             log.warn("[Lifecycle] User {} không có quyền vào app {}", userId, resourceId);
             accessLogService.log(
                     user.getId(),
