@@ -58,7 +58,7 @@ export const RulesPage = () => {
                         <tr>
                             <th>Tên Rule</th>
                             <th>Ngày tạo</th>
-                            <th>Hết hạn</th>
+                            <th>Thời hạn</th>
                             <th style={{ textAlign: 'center' }}>Bật/Tắt</th>
                             <th style={{ textAlign: 'center' }}>Xóa</th>
                         </tr>
