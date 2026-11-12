@@ -100,10 +100,10 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
         connectionLifecycleService.register(connectorId, ctx.channel());
         this.registered = true;
 
-        log.info("[Connector] {} registered", connectorId);
+//        log.info("[Connector] {} registered", connectorId);
 
         List<App> apps = routingTable.getAppsByConnector(connectorId);
-        log.info("[Connector] {} has {} apps", connectorId, apps.size());
+//        log.info("[Connector] {} has {} apps", connectorId, apps.size());
 
         RoutingResFrame res = new RoutingResFrame();
         res.setAppCount(apps.size());

@@ -48,12 +48,6 @@ public class ZTNAServerBootstrap {
 
         startConnectorServer();
         startAppServer();
-
-        log.info("═".repeat(60));
-        log.info("[Server] Admin HTTPS:  https://localhost:443    (Spring Boot)");
-        log.info("[Server] Connector WS: ws://localhost:{}/connector", CONNECTOR_PORT);
-        log.info("[Server] App WS:       ws://localhost:{}/app", APP_PORT);
-        log.info("═".repeat(60));
     }
 
     private void startAppServer() throws InterruptedException {

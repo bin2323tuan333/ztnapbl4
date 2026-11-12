@@ -25,9 +25,9 @@ public class RoutingTable {
 
     public void replaceAll(Map<String, App> newRoutes) {
         Map<String, App> fresh = new ConcurrentHashMap<>(newRoutes);
-        fresh.forEach((appId, app) -> {
-            log.info("[Routing Table] Nạp app: id={}, name={}", appId, app.getName());
-        });
+//        fresh.forEach((appId, app) -> {
+//            log.info("[Routing Table] Nạp app: id={}, name={}", appId, app.getName());
+//        });
         this.routes = fresh;
     }
 

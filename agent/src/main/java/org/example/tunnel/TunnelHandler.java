@@ -103,8 +103,6 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
             LocalServer server = new LocalServer(resourceId);
             int port = server.start();
 
-
-
             String type = pendingHttpRequest.getTypes(resFrame.getRequestId());
             try {
                 if (type != null) {
@@ -149,21 +147,7 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         Channel channel = streamRegistry.get(dataFrame.getStreamId());
         if (channel != null && channel.isActive()) {
             System.out.println("[Tunnel] [Server -> Agent] " + dataFrame.getData().length + " bytes");
-
-            String content = new String(dataFrame.getData(), java.nio.charset.StandardCharsets.UTF_8);
-            // In ra 500 ký tự đầu tiên (để tránh log bị quá dài)
-            String preview = content.length() > 500 ? content.substring(0, 500) + "..." : content;
-
-            // Thay thế \r và \n bằng ký tự hiển thị để dễ nhìn
-            preview = preview.replace("\r", "\\r").replace("\n", "\\n\n");
-
-            System.out.println("[Byte-Content]: \n" + preview);
-
-
             channel.writeAndFlush(Unpooled.copiedBuffer(dataFrame.getData()));
-
-
-
         } else {
             System.err.println("[Tunnel] Không tìm thấy Channel cho streamId=" + dataFrame.getStreamId());
         }
@@ -182,5 +166,10 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         ctx.close();
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("Mat ket noi voi server");
     }
 }

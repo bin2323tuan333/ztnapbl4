@@ -10,13 +10,7 @@ import java.util.Map;
 public class ConnectorApp {
 
     public static void main(String[] args) {
-        ConnectorConfig config = new ConnectorConfig(
-                "ws://localhost:8443/connector",
-                "toilaconnector1"
-        );
-
-        TcpClient tcpClient = new TcpClient();
-        ConnectorClient client = new ConnectorClient(config, () -> new ConnectorHandler(config, tcpClient));
-        client.start();
+        ConnectorClient connectorClient = ConnectorClient.getInstance();
+        connectorClient.start();
     }
 }

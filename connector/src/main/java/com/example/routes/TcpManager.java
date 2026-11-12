@@ -1,5 +1,6 @@
 package com.example.routes;
 
+import com.example.ws.ConnectorClient;
 import io.netty.channel.Channel;
 
 import java.util.Map;
@@ -25,8 +26,10 @@ public class TcpManager {
         sessions.put(streamId, channel);
     }
 
-    public void remove(String streamId) {
+    public void remove(String streamId, byte reason) {
         sessions.remove(streamId);
+        ConnectorClient connectorClient = ConnectorClient.getInstance();
+        connectorClient.sendClose(streamId, reason);
     }
 
     public Map<String, Channel> getSessions() {

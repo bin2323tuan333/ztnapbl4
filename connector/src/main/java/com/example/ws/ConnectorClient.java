@@ -1,6 +1,9 @@
 package com.example.ws;
 
+import com.example.protocol.frames.CloseFrame;
+import com.example.tcp.TcpClient;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -8,6 +11,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.ssl.SslContext;
@@ -26,29 +30,23 @@ import java.util.function.Supplier;
 
 @Slf4j
 public class ConnectorClient {
+    private static ConnectorClient _instance;
+    public static ConnectorClient getInstance() {
+        if (_instance == null) _instance = new ConnectorClient();
+        return _instance;
+    }
+
+    private ConnectorClient() {}
 
     private static final int CONNECT_TIMEOUT_MS = 10_000;
     private static final int TCP_CHECK_TIMEOUT_MS = 3_000;
     private static final int MAX_FRAME_SIZE = 1024 * 1024;
     private static final int RECONNECT_DELAY_SEC = 1;
 
-    private final ConnectorConfig config;
-    private final Supplier<ConnectorHandler> handlerFactory;   // ★ Factory
+    private final ConnectorConfig config = ConnectorConfig.getInstance();
     private final EventLoopGroup group = new NioEventLoopGroup();
     private final AtomicBoolean stopped = new AtomicBoolean(false);
     private volatile Channel currentChannel;
-    private final SslContext sslContext;
-
-    public ConnectorClient(ConnectorConfig config, Supplier<ConnectorHandler> handlerFactory) {
-        this.config = config;
-        this.handlerFactory = handlerFactory;
-
-        try {
-            this.sslContext = SslContextBuilder.forClient().build();
-        } catch (SSLException e) {
-            throw new IllegalStateException("Failed to init SSL context", e);
-        }
-    }
 
     public void start() {
         while (!stopped.get()) {
@@ -77,8 +75,7 @@ public class ConnectorClient {
 
 
     private void connectOnce() throws Exception {
-        URI uri = URI.create(config.getServerUrl());
-        boolean useTls = "wss".equalsIgnoreCase(uri.getScheme());
+        URI uri = URI.create(config.getSERVER_URL());
         String host = uri.getHost();
         int port = resolvePort(uri);
 
@@ -93,10 +90,6 @@ public class ConnectorClient {
                     protected void initChannel(SocketChannel ch) {
                         ChannelPipeline p = ch.pipeline();
 
-                        if (useTls) {
-                            p.addLast(sslContext.newHandler(ch.alloc(), uri.getHost(), resolvePort(uri)));
-                        }
-
                         p.addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS));
                         p.addLast(new HttpClientCodec());
                         p.addLast(new HttpObjectAggregator(MAX_FRAME_SIZE));
@@ -104,7 +97,7 @@ public class ConnectorClient {
                         DefaultHttpHeaders headers = new DefaultHttpHeaders();
                         headers.add(
                                 "Authorization",
-                                "Bearer " + config.getToken()
+                                "Bearer " + config.getTOKEN()
                         );
 
                         p.addLast(
@@ -118,7 +111,10 @@ public class ConnectorClient {
                                 )
                         );
 
-                        p.addLast(handlerFactory.get());
+                        p.addLast(new ConnectorHandler(
+                                ConnectorConfig.getInstance(),
+                                TcpClient.getInstance()
+                        ));
                     }
                 });
 
@@ -127,11 +123,11 @@ public class ConnectorClient {
         Channel channel = b.connect(host, port).sync().channel();
         currentChannel = channel;
 
-        log.info("Connected to {}", config.getServerUrl());
+        log.info("Connected to {}", config.getSERVER_URL());
         channel.closeFuture().sync();
 
         currentChannel = null;
-        log.info("Disconnected from {}", config.getServerUrl());
+        log.info("Disconnected from {}", config.getSERVER_URL());
     }
 
     public void stop() {
@@ -154,5 +150,12 @@ public class ConnectorClient {
             case "ws", "http" -> 80;
             default -> 80;
         };
+    }
+
+    public void sendClose(String streamId, byte reason) {
+        CloseFrame closeFrame = new CloseFrame(streamId, reason);
+        currentChannel.writeAndFlush(new BinaryWebSocketFrame(
+                Unpooled.wrappedBuffer(closeFrame.encode())
+        ));
     }
 }

@@ -271,9 +271,9 @@ public class SessionLifecycleService {
                 Unpooled.wrappedBuffer(frame.encode())
         )).addListener(future -> {
             if (future.isSuccess()) {
-                log.info("[Lifecycle] ✅ Server → Connector: stream={}, {} bytes", streamId, payload.length);
+                log.info("[Lifecycle] Server → Connector: stream={}, {} bytes", streamId, payload.length);
             } else {
-                log.error("[Lifecycle] ❌ Gửi thất bại tới Connector: stream={}", streamId);
+                log.error("[Lifecycle] Gửi thất bại tới Connector: stream={}", streamId);
             }
         });
     }

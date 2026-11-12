@@ -9,14 +9,27 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Data
-@NoArgsConstructor
 public class ConnectorConfig {
-    private String serverUrl;
-    private String token;
-    private Map<String, String> services;
+    private static ConnectorConfig instance = null;
 
-    public ConnectorConfig(String serverUrl, String token) {
-        this.serverUrl = serverUrl;
-        this.token = token;
+    public static ConnectorConfig getInstance() {
+        if (instance == null) instance = new ConnectorConfig();
+        return instance;
+    }
+
+    private ConnectorConfig() {}
+
+
+    private final String SERVER_URL ="ws://localhost:8443/connector";
+
+    private final String TOKEN = "toilaconnector1";
+
+
+    public String getSERVER_URL() {
+        return SERVER_URL;
+    }
+
+    public String getTOKEN() {
+        return TOKEN;
     }
 }

@@ -1,6 +1,8 @@
 package com.example.tcp;
 
+import com.example.protocol.frames.CloseFrame;
 import com.example.routes.TcpManager;
+import com.example.ws.ConnectorClient;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -21,6 +23,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Slf4j
 public class TcpClient {
+    private static TcpClient _instance = null;
+    public static TcpClient getInstance() {
+        if (_instance == null) _instance = new TcpClient();
+        return _instance;
+    }
+
+    private TcpClient() {}
+
     private static final int MAX_FRAME_SIZE = 1024 * 1024;
     private final EventLoopGroup group = new NioEventLoopGroup();
 
@@ -63,7 +73,7 @@ public class TcpClient {
     public void close(String streamId) {
         TcpManager tcpManager = TcpManager.getInstance();
         Channel channel = tcpManager.getChannel(streamId);
-        tcpManager.remove(streamId);
+        tcpManager.remove(streamId, CloseFrame.REASON_NORMAL);
         if (channel != null && channel.isActive()) {
             channel.close();
             log.info("[TcpClient] Đã đóng stream={}", streamId);
@@ -85,7 +95,7 @@ public class TcpClient {
 
         if (!tcpChannel.isActive()) {
             log.warn("[TcpClient] TCP channel không active: stream={}", streamId);
-            TcpManager.getInstance().remove(streamId);
+            TcpManager.getInstance().remove(streamId, CloseFrame.REASON_APP_ERROR);
             return;
         }
 

@@ -59,14 +59,6 @@ netty:
   worker-threads: 8
 
 
-jwt:
-  secret: change-me-min-32-bytes-long-secret-please
-  ttl-minutes: 60
-
-
-connector:
-  token: connector-demo-token-abc123
-
 logging:
   level:
     root: INFO

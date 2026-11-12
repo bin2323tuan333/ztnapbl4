@@ -1,5 +1,6 @@
 package com.example.tcp;
 
+import com.example.protocol.frames.CloseFrame;
 import com.example.protocol.frames.DataFrame;
 import com.example.routes.TcpManager;
 import com.example.ws.ConnectorClient;
@@ -49,16 +50,14 @@ public class TcpToWsHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        TcpManager.getInstance().remove(streamId);
+        TcpManager.getInstance().remove(streamId, CloseFrame.REASON_APP_CLOSED);
         log.info("[TcpToWsHandler] [stream={}] Nginx đã đóng kết nối TCP", streamId);
-//        TcpManager tcpManager = TcpManager.getInstance();
-//        tcpManager.remove(streamId);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("[stream={}] Lỗi TCP", streamId, cause);
-        TcpManager.getInstance().remove(streamId);
+        TcpManager.getInstance().remove(streamId, CloseFrame.REASON_APP_ERROR);
         ctx.close();
     }
 }

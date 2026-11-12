@@ -44,7 +44,7 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
 
             pullRoutingTask = ctx.executor().scheduleAtFixedRate(() -> {
                 if (ctx.channel().isActive()) {
-                    RoutingReqFrame req = new RoutingReqFrame(config.getToken());
+                    RoutingReqFrame req = new RoutingReqFrame(config.getTOKEN());
                     ctx.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(req.encode())));
                 }
             }, 0, 10, TimeUnit.SECONDS);
@@ -89,7 +89,6 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
 
 
     private void handleRoutingRes(ByteBuf buf) {
-        log.info("Nhan: ROUTING_RESPONSE");
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
 
@@ -103,16 +102,16 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
                 Map<String, App> newRoutes = new HashMap<>();
                 for (App app : apps) {
                     newRoutes.put(app.getId(), app);
-                    log.info(" -> Đã nhận App: id={}, name={}, target={}:{}",
-                            app.getId(), app.getName(), app.getHost(), app.getPort());
+//                    log.info(" -> Đã nhận App: id={}, name={}, target={}:{}",
+//                            app.getId(), app.getName(), app.getHost(), app.getPort());
                 }
 
                 RoutingTable.getInstance().replaceAll(newRoutes);
 
-                log.info("[Connector] ✅ Cập nhật Routing Table thành công. Tổng số App: {}",
-                        RoutingTable.getInstance().size());
+//                log.info("[Connector] ✅ Cập nhật Routing Table thành công. Tổng số App: {}",
+//                        RoutingTable.getInstance().size());
             } else {
-                log.warn("[Connector] ⚠ ROUTING_RESPONSE không chứa danh sách App!");
+//                log.warn("[Connector] ⚠ ROUTING_RESPONSE không chứa danh sách App!");
             }
         } catch (Exception e) {
             log.error("[Connector] Lỗi khi xử lý ROUTING_RESPONSE", e);
@@ -170,7 +169,6 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
             return;
         }
         tcpClient.sendData(streamId, payload);
-
         log.info("[Connector] Nhận DATA cho stream={}, len={}", streamId, payload == null ? "null" : payload.length);
     }
 

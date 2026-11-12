@@ -8,6 +8,7 @@ import org.example.cache.ClientOpenRegistry;
 import org.example.cache.StreamRegistry;
 import org.example.tunnel.TunnelClient;
 
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -52,13 +53,16 @@ public class LocalHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
-        if (tunnelClient.channel == null || !tunnelClient.channel.isActive()) ctx.channel().close();
+        if (tunnelClient.channel == null || !tunnelClient.channel.isActive()) {
+            tunnelClient.connect();
+            return;
+        }
         tunnelClient.sendStreamData(streamId, data);
     }
 
     public void onAccessSuccess(String streamId) {
         this.streamId = streamId;
-        System.out.println("[LocalHandler] ✅ Nhận streamId=" + streamId + " → Đăng ký và xả đệm.");
+        System.out.println("[LocalHandler] Nhận streamId=" + streamId + " → Đăng ký và xả đệm.");
         streamRegistry.register(streamId, ctx.channel());
         for (ByteBuf buf : pendingBuf) {
             try {
@@ -78,6 +82,13 @@ public class LocalHandler extends SimpleChannelInboundHandler<ByteBuf> {
         if (streamId != null) {
             Factory.streamRegistry.remove(streamId);
             Factory.tunnelClient.sendStreamClose(streamId);
+        }
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        if (cause instanceof SocketException && "Connection reset".equals(cause.getMessage()) || !ctx.channel().isOpen()) {
+                System.out.println("Kết nối bị đóng đột ngột từ client:" + cause.getMessage());
         }
     }
 

@@ -144,7 +144,7 @@ public class ResourceWsHandler extends SimpleChannelInboundHandler<WebSocketFram
             accessLogService.log(
                     null,
                     ip,
-                    null,
+                    "Unknown",
                     appUuid,
                     appName,
                     appHost,
