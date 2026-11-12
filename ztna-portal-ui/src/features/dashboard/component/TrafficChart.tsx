@@ -10,7 +10,7 @@ export const TrafficChart = ({ data }: Props) => {
         // Thêm display flex để nó có thể giãn theo chiều dọc
         <div className="dashboard-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div className="panel-header">
-                <h3>Traffic summary</h3>
+                <h3>Hoạt động trong ngày</h3>
             </div>
             {/* 🔥 Đổi height: 300 thành flex: 1, minHeight: 300 */}
             <div style={{ width: '100%', flex: 1, minHeight: 300 }}>
@@ -21,8 +21,8 @@ export const TrafficChart = ({ data }: Props) => {
                         <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
                         <Legend wrapperStyle={{ paddingTop: '10px' }} />
                         <Tooltip cursor={{ fill: '#f3f4f6' }} />
-                        <Bar dataKey="networkLogs" name="Network Logs" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={12} />
-                        <Bar dataKey="auditLogs" name="Audit Logs" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} />
+                        <Bar dataKey="networkLogs" name="Lượt truy cập ứng dụng" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={12} />
+                        <Bar dataKey="auditLogs" name="Thao tác quản trị" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>

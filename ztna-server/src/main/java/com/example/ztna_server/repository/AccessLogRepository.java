@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public interface AccessLogRepository extends JpaRepository<AccessLog, UUID> {
@@ -29,5 +30,7 @@ public interface AccessLogRepository extends JpaRepository<AccessLog, UUID> {
             @Param("from") Instant from,
             @Param("to") Instant to,
             Pageable pageable
-    );
+    );   
+    // Dashboard: log trong một khoảng thời gian [from, to)
+    List<AccessLog> findByCreatedAtGreaterThanEqualAndCreatedAtLessThan(Instant from, Instant to);
 }

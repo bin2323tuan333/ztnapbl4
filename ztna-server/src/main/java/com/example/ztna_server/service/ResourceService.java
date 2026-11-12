@@ -8,6 +8,7 @@ import com.example.ztna_server.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,7 +29,7 @@ public class ResourceService {
     }
 
     public List<ResourceResponse> getResourcesByUserId(UUID userId) {
-        return resourceRepository.findAllByUserId(userId).stream()
+        return resourceRepository.findAllByUserId(userId, Instant.now()).stream()
                 .map(resourceMapper::toResourceResponse)
                 .toList();
     }

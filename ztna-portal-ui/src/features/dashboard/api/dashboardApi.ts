@@ -2,56 +2,45 @@
 import { getRequest } from '@/shared/utils/apiClient';
 import { format } from 'date-fns';
 
-// Hàm sinh dữ liệu giả lập dựa trên ngày
-const getDynamicMockData = (dateStr: string) => {
-    const seed = dateStr.split('-').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const multiplier = (seed % 5) + 1;
-
-    const hours = Array.from({ length: 12 }, (_, i) => {
-        const h = i * 2;
-        return `${String(h).padStart(2, '0')}:00`;
-    });
-
-    const trafficData = hours.map((hour, index) => {
-        const timeFactor = index < 4 ? 1 : index < 8 ? 2 : 1.5;
-        return {
-            name: hour,
-            networkLogs: Math.floor((Math.random() * 1500 + 500) * multiplier * timeFactor),
-            auditLogs: Math.floor((Math.random() * 500 + 100) * multiplier * timeFactor),
-        };
-    });
-
-    // TÍNH TOÁN 4 THẺ KPI
-    const totalUsers = 20 + (seed % 10);
-    const lockedUsers = 3 + (seed % 4);
-    const totalResources = 10 + (seed % 5);
-    const successRate = 85 + (seed % 14);
-
-    return {
-        stats: {
-            totalUsers: totalUsers,
-            activeUsers: totalUsers - lockedUsers,
-            lockedUsers: lockedUsers,
-            totalResources: totalResources,
-            enabledResources: totalResources - 1,
-        },
-        trafficData,
-        targetData: {
-            successRate: successRate,
-            failedRate: 100 - successRate,
-            percentage: successRate.toFixed(2),
-            change: (seed % 5) - 2,
-            text: `Thống kê truy cập ngày ${format(new Date(dateStr), 'dd/MM/yyyy')}`
-        }
+// Khớp với DashboardResponse của backend
+interface DashboardResponse {
+    stats: {
+        totalUsers: number;
+        activeUsers: number;
+        lockedUsers: number;
+        totalResources: number;
+        enabledResources: number;
     };
-};
-
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    trafficData: { name: string; networkLogs: number; auditLogs: number }[];
+    targetData: {
+        allowed: number;
+        denied: number;
+        successRate: number;
+        failedRate: number;
+        change: number;
+    };
+}
 
 export const dashboardApi = {
+    // GET /api/v1/admin/dashboard?date=yyyy-MM-dd
     getDashboardData: async (date: Date) => {
-        const dateStr = format(date, 'yyyy-MM-dd');
-        await delay(600);
-        return getDynamicMockData(dateStr);
-    }
+        const res: DashboardResponse = await getRequest(`/api/v1/admin/dashboard?date=${format(date, 'yyyy-MM-dd')}`);
+        const { allowed, denied, successRate, failedRate, change } = res.targetData;
+        const day = format(date, 'dd/MM/yyyy');
+
+        return {
+            stats: res.stats,
+            trafficData: res.trafficData,
+            // Giữ đúng dạng dữ liệu TargetGauge đang dùng
+            targetData: {
+                successRate,
+                failedRate,
+                percentage: successRate.toFixed(1),
+                change,
+                text: allowed + denied === 0
+                    ? `Chưa có lượt truy cập nào ngày ${day}`
+                    : `${allowed} lượt cho phép, ${denied} lượt bị chặn ngày ${day}`,
+            },
+        };
+    },
 };
