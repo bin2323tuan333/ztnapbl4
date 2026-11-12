@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,6 +24,7 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
     Optional<Resource> findByName(String name);
     boolean existsByName(String name);
     long countByConnectorId(UUID connectorId);
+
     // Dashboard: đếm ứng dụng đang bật (true) / tắt (false)
     long countByEnabled(Boolean enabled);
 
@@ -40,11 +42,12 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
         WHERE u.id = :userId
           AND u.enabled = true
           AND rule.enabled = true
+          AND (rule.expiresAt IS NULL OR rule.expiresAt > :now)
     )
     AND r.enabled = true
     ORDER BY r.name ASC
     """)
-    List<ResourceAccess> findAllByUserId(@Param("userId") UUID userId);
+    List<ResourceAccess> findAllByUserId(@Param("userId") UUID userId, @Param("now") Instant now);
     // Kiểm tra quyền khi user mở app qua Agent: > 0 nghĩa là user thuộc ít nhất
     // một rule đang bật có chứa app này (và app đang bật).
     @Query("""
@@ -55,8 +58,8 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
     WHERE r.id = :resourceId
       AND u.id = :userId
       AND rule.enabled = true
-      AND (rule.expiresAt IS NULL OR rule.expiresAt > CURRENT_TIMESTAMP)
+      AND (rule.expiresAt IS NULL OR rule.expiresAt > :now)
       AND r.enabled = true
     """)
-    long countAccess(@Param("userId") UUID userId, @Param("resourceId") UUID resourceId);
+    long countAccess(@Param("userId") UUID userId, @Param("resourceId") UUID resourceId, @Param("now") Instant now);
 }
