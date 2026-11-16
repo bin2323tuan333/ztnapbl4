@@ -158,7 +158,6 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
         closeFrame.decode(data);
-
         Channel channel = streamRegistry.remove(closeFrame.getStreamId());
         if (channel != null) channel.close();
     }

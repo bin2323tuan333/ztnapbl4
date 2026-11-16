@@ -53,7 +53,7 @@ public class LocalHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
-        if (tunnelClient.channel == null || !tunnelClient.channel.isActive()) {
+        if (Factory.tunnelCurrent == null || !Factory.tunnelCurrent.isActive()) {
             tunnelClient.connect();
             return;
         }
@@ -74,6 +74,16 @@ public class LocalHandler extends SimpleChannelInboundHandler<ByteBuf> {
             }
         }
         pendingBuf.clear();
+    }
+
+    public void closeFromGateway() {
+        if (streamId != null) {
+            streamRegistry.remove(streamId);
+        }
+
+        if (ctx != null && ctx.channel().isOpen()) {
+            ctx.close();
+        }
     }
 
     @Override

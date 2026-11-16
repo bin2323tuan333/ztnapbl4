@@ -1,5 +1,6 @@
 package org.example;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import org.example.cache.ClientOpenRegistry;
@@ -15,6 +16,7 @@ public class Factory {
     public static TunnelClient tunnelClient;
     public static HttpServer httpServer;
     public static ClientOpenRegistry clientOpenRegistry;
+    public static Channel tunnelCurrent;
 
     public static EventLoopGroup bossGroup;
     public static EventLoopGroup workerGroup;

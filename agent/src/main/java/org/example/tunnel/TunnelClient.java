@@ -2,7 +2,6 @@ package org.example.tunnel;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -19,11 +18,10 @@ import java.net.URI;
 public class TunnelClient {
     private final AgentConfig agentConfig = Factory.agentConfig;
     private final EventLoopGroup tunnelGroup = Factory.tunnelGroup;
-    public volatile Channel channel;
 
     public TunnelClient() {
         try {
-            this.channel = connect().sync().channel();
+            Factory.tunnelCurrent = connect().sync().channel();
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -44,7 +42,7 @@ public class TunnelClient {
         ChannelFuture future = b.connect(host, port);
         future.addListener(f -> {
             if (f.isSuccess()) {
-                this.channel = future.channel();
+                Factory.tunnelCurrent = future.channel();
             } else {
                 System.err.println("[TunnelClient] Kết nối thất bại: " + f.cause());
             }
@@ -71,21 +69,21 @@ public class TunnelClient {
     }
 
     public void send(byte[] data) {
-        if (channel != null && channel.isActive()) {
+        if (Factory.tunnelCurrent != null && Factory.tunnelCurrent.isActive()) {
             System.out.println("[TunnelClient] Đang gửi " + data.length + " bytes lên Gateway...");
-            channel.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(data)));
+            Factory.tunnelCurrent.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(data)));
         } else {
             System.err.println("[TunnelClient] Mất kết nối, không thể gửi data!");
         }
     }
 
     public boolean isReady() {
-        return channel != null && channel.isActive();
+        return Factory.tunnelCurrent != null && Factory.tunnelCurrent.isActive();
     }
 
     public void close() {
-        if (channel != null) {
-            channel.close();
+        if (Factory.tunnelCurrent != null) {
+            Factory.tunnelCurrent.close();
             System.out.println("[TunnelClient] Đã đóng kết nối tới Gateway.");
         }
     }
