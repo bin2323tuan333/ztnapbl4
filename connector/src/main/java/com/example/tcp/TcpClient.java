@@ -1,6 +1,8 @@
 package com.example.tcp;
 
+import com.example.model.App;
 import com.example.protocol.frames.CloseFrame;
+import com.example.routes.RoutingTable;
 import com.example.routes.TcpManager;
 import com.example.ws.ConnectorClient;
 import io.netty.bootstrap.Bootstrap;
@@ -34,7 +36,7 @@ public class TcpClient {
     private static final int MAX_FRAME_SIZE = 1024 * 1024;
     private final EventLoopGroup group = new NioEventLoopGroup();
 
-    public ChannelFuture connect(String streamId, String host, int port, Channel wsChannel) {
+    public ChannelFuture connect(String streamId, String resourceId, String host, int port) {
         Bootstrap b = new Bootstrap();
         b.group(group)
                 .channel(NioSocketChannel.class)
@@ -46,6 +48,7 @@ public class TcpClient {
                     @Override
                     protected void initChannel(SocketChannel ch) {
                         Consumer<byte[]> sender = encoded -> {
+                            Channel wsChannel = ConnectorClient.getInstance().getCurrentChannel();
                             if (wsChannel.isActive()) {
                                 wsChannel.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(encoded)));
                             } else {
@@ -60,7 +63,7 @@ public class TcpClient {
 
         future.addListener((ChannelFutureListener) f -> {
             if (f.isSuccess()) {
-                TcpManager.getInstance().add(streamId, f.channel());
+                TcpManager.getInstance().add(streamId, resourceId, f.channel());
                 log.info("TCP connected: stream={}, {}:{}", streamId, host, port);
             } else {
                 log.error("TCP failed: stream={}, {}:{}, err={}", streamId, host, port, f.cause().getMessage());
@@ -88,26 +91,21 @@ public class TcpClient {
         }
 
         Channel tcpChannel = TcpManager.getInstance().getChannel(streamId);
-        if (tcpChannel == null) {
-            log.warn("[TcpClient] Stream không tồn tại: {}", streamId);
+        if (tcpChannel == null || !tcpChannel.isActive()) {
+            String resourceId = TcpManager.getInstance().getResourceId(streamId);
+            App app = RoutingTable.getInstance().get(resourceId);
+            connect(streamId, resourceId, app.getHost(), app.getPort()).addListener((ChannelFutureListener) f -> {
+                if (f.isSuccess()) {
+                    Channel newTcpChannel = TcpManager.getInstance().getChannel(streamId);
+                    newTcpChannel.writeAndFlush(Unpooled.wrappedBuffer(payload));
+                } else {
+                    close(streamId);
+                }
+            });
             return;
         }
 
-        if (!tcpChannel.isActive()) {
-            log.warn("[TcpClient] TCP channel không active: stream={}", streamId);
-            TcpManager.getInstance().remove(streamId, CloseFrame.REASON_APP_ERROR);
-            return;
-        }
-
-
-        ByteBuf buf = Unpooled.wrappedBuffer(payload);
-        tcpChannel.writeAndFlush(buf).addListener(f -> {
-            if (!f.isSuccess()) {
-                log.error("[TcpClient] Ghi vào App fail stream={}", streamId, f.cause());
-                close(streamId);
-            }
-        });
-
+        tcpChannel.writeAndFlush(Unpooled.wrappedBuffer(payload));
         log.debug("[TcpClient] Server → App: stream={}, {} bytes", streamId, payload.length);
     }
 }

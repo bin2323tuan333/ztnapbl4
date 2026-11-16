@@ -137,7 +137,7 @@ public class AuthService {
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_TOKEN));
 
         if (dbToken.getExpiredAt().isBefore(Instant.now())) {
-            refreshTokenRepository.delete(dbToken);
+            refreshTokenRepository.deleteById(dbToken.getId());
             throw new AppException(ErrorCode.REFRESH_TOKEN_EXPIRED);
         }
 

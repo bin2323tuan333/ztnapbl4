@@ -102,14 +102,9 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
                 Map<String, App> newRoutes = new HashMap<>();
                 for (App app : apps) {
                     newRoutes.put(app.getId(), app);
-//                    log.info(" -> Đã nhận App: id={}, name={}, target={}:{}",
-//                            app.getId(), app.getName(), app.getHost(), app.getPort());
                 }
 
                 RoutingTable.getInstance().replaceAll(newRoutes);
-
-//                log.info("[Connector] ✅ Cập nhật Routing Table thành công. Tổng số App: {}",
-//                        RoutingTable.getInstance().size());
             } else {
 //                log.warn("[Connector] ⚠ ROUTING_RESPONSE không chứa danh sách App!");
             }
@@ -139,7 +134,7 @@ public class ConnectorHandler extends SimpleChannelInboundHandler<WebSocketFrame
 
         log.info("[Connector] Yêu cầu CONNECT tới App: {} ({}:{})", app.getName(), app.getHost(), app.getPort());
 
-        tcpClient.connect(streamId, app.getHost(), app.getPort(), ctx.channel())
+        tcpClient.connect(streamId,app.getId(), app.getHost(), app.getPort())
                 .addListener(future -> {
                     if (future.isSuccess()) {
                         ConnectAckFrame ackFrame = new ConnectAckFrame(streamId, ConnectAckFrame.STATUS_OK, "");

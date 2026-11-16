@@ -27,8 +27,6 @@ public class TcpToWsHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        TcpManager tcpManager = TcpManager.getInstance();
-        tcpManager.add(streamId, ctx.channel());
         log.info("[stream={}] TCP active", streamId);
     }
 
@@ -50,7 +48,7 @@ public class TcpToWsHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        TcpManager.getInstance().remove(streamId, CloseFrame.REASON_APP_CLOSED);
+//        TcpManager.getInstance().remove(streamId, CloseFrame.REASON_APP_CLOSED);
         log.info("[TcpToWsHandler] [stream={}] Nginx đã đóng kết nối TCP", streamId);
     }
 

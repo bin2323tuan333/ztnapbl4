@@ -48,6 +48,10 @@ public class ConnectorClient {
     private final AtomicBoolean stopped = new AtomicBoolean(false);
     private volatile Channel currentChannel;
 
+    public Channel getCurrentChannel() {
+        return currentChannel;
+    }
+
     public void start() {
         while (!stopped.get()) {
             try {

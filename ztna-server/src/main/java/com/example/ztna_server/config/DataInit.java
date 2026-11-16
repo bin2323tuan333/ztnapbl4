@@ -32,9 +32,6 @@ public class DataInit implements CommandLineRunner {
     @Override
     public void run(String... args) {
 
-        // ==========================================
-        // 1. KHỞI TẠO CONNECTOR
-        // ==========================================
         Connector defaultConnector;
         if (connectorRepository.count() == 0) {
             defaultConnector = Connector.builder()
@@ -48,9 +45,6 @@ public class DataInit implements CommandLineRunner {
             defaultConnector = connectorRepository.findAll().get(0);
         }
 
-        // ==========================================
-        // 2. KHỞI TẠO RESOURCES (APPS)
-        // ==========================================
         Resource web, ssh, mysql;
         if (resourceRepository.count() == 0) {
             web = Resource.builder()
@@ -77,9 +71,7 @@ public class DataInit implements CommandLineRunner {
             mysql = existingResources.stream().filter(r -> r.getType() == ResourceType.MYSQL).findFirst().orElse(null);
         }
 
-        // ==========================================
-        // 3. KHỞI TẠO USERS
-        // ==========================================
+
         if (userRepository.count() > 0) {
             System.out.println("ℹ️ Users đã có, bỏ qua seed Users.");
             return;
@@ -112,61 +104,5 @@ public class DataInit implements CommandLineRunner {
                 .email("locked@ztna.com").enabled(false).createdAt(now).updatedAt(now).build();
 
         userRepository.saveAll(List.of(adminUser, supervisorUser, normalUser, alice, bob, lockedUser));
-
-        System.out.println("✅ Đã seed 6 users thành công.");
-        System.out.println("   - admin      / 123        (ADMIN)");
-        System.out.println("   - supervisor / super123   (SUPERVISOR)");
-        System.out.println("   - user       / 123        (USER)");
-        System.out.println("   - alice      / alice123   (USER)");
-        System.out.println("   - bob        / bob123     (USER)");
-        System.out.println("   - locked     / locked123  (USER - BỊ KHÓA)");
-
-        // ==========================================
-        // 4. KHỞI TẠO RULES (GÓI QUYỀN TRUY CẬP)
-        // ==========================================
-            if (ruleRepository.count() == 0 && web != null && ssh != null && mysql != null) {
-
-                // Rule 1: Nhóm Dev
-                Rule devRule = Rule.builder()
-                        // ...
-                        .name("Dev Team Access")
-                        .users(Set.of(alice, bob)) // Đổi List thành Set
-                        .resources(Set.of(web, ssh)) // Đổi List thành Set
-                        .build();
-
-                // Rule 2: Nhóm DBA
-                Rule dbaRule = Rule.builder()
-                        // ...
-                        .name("DBA Team Access")
-                        .users(Set.of(alice, adminUser))
-                        .resources(Set.of(mysql))
-                        .build();
-
-                // Rule 3: Admin
-                Rule adminRule = Rule.builder()
-                        // ...
-                        .name("Super Admin Access")
-                        .users(Set.of(adminUser))
-                        .resources(Set.of(web, ssh, mysql))
-                        .build();
-
-                // Rule 4: User Only
-                Rule singleUserRule = Rule.builder()
-                        // ...
-                        .name("Cá nhân - User Only")
-                        .users(Set.of(normalUser))
-                        .resources(Set.of(web))
-                        .build();
-
-                // Lưu tất cả Rules vào Database
-                ruleRepository.saveAll(List.of(devRule, dbaRule, adminRule, singleUserRule));
-
-                System.out.println("====== ĐÃ TỰ ĐỘNG THÊM 4 RULES DEMO ======");
-                System.out.println("   - Rule 'Dev Team Access' (Dành cho Alice, Bob)");
-                System.out.println("   - Rule 'DBA Team Access' (Dành cho Alice, Admin)");
-                System.out.println("   - Rule 'Super Admin Access' (Dành cho Admin)");
-                System.out.println("   - Rule 'Cá nhân - User Only' (Dành riêng cho user, chỉ vào được Web)");
-            }
-
     }
 }

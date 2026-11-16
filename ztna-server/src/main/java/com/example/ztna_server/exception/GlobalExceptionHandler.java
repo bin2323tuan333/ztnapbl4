@@ -2,6 +2,7 @@ package com.example.ztna_server.exception;
 
 import com.example.ztna_server.dto.response.ErrorResponse;
 import com.example.ztna_server.enums.ErrorCode;
+import io.jsonwebtoken.ExpiredJwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,13 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ExpiredJwtException.class)
+    public ResponseEntity<?> handleExpiredJwt(ExpiredJwtException ex) {
+        ErrorCode ec = ErrorCode.ACCESS_DENIED;
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(ec.getCode(),"Vui lòng đăng nhập lại!"));
+    }
 
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ErrorResponse> handleApp(AppException e) {
