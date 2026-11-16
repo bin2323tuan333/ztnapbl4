@@ -13,6 +13,7 @@ public class ResourceResFrame extends Frame {
     public static final byte STATUS_CONNECTOR_OFFLINE = 0x02;
     public static final byte STATUS_INTERNAL_ERROR    = 0x03;
     public static final byte STATUS_AUTH_FAILED       = 0x04;
+    public static final byte STATUS_ERROR       = 0x05;
 
     private String requestId;
     private String streamId;

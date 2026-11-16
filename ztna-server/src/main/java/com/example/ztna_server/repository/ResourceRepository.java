@@ -27,6 +27,8 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
 
     // Dashboard: đếm ứng dụng đang bật (true) / tắt (false)
     long countByEnabled(Boolean enabled);
+    @Query("SELECT r FROM Resource r WHERE r.enabled = true")
+    List<Resource> findAllEnabled();
 
 
     @Query("""

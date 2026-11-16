@@ -28,8 +28,8 @@ public class TcpManager {
 
     public void remove(String streamId, byte reason) {
         sessions.remove(streamId);
-        ConnectorClient connectorClient = ConnectorClient.getInstance();
-        connectorClient.sendClose(streamId, reason);
+//        ConnectorClient connectorClient = ConnectorClient.getInstance();
+//        connectorClient.sendClose(streamId, reason);
     }
 
     public Map<String, Channel> getSessions() {

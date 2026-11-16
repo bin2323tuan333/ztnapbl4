@@ -1,22 +1,33 @@
+
 package com.example.ztna_server.netty;
 
-import com.example.ztna_server.routes.App;
 import com.example.ztna_server.entity.Connector;
-import com.example.ztna_server.protocol.*;
+import com.example.ztna_server.protocol.FrameType;
 import com.example.ztna_server.protocol.frames.*;
 import com.example.ztna_server.repository.ConnectorRepository;
-import com.example.ztna_server.routes.RoutingTable;
-import com.example.ztna_server.routes.Session;
-import com.example.ztna_server.routes.SessionManager;
-import com.example.ztna_server.service.ConnectionLifecycleService;
+import com.example.ztna_server.dto.internal.App;
+import com.example.ztna_server.runtime.connection.agent.AgentConnection;
+import com.example.ztna_server.runtime.connection.agent.AgentConnectionRegistry;
+import com.example.ztna_server.runtime.connection.agent.PendingConnect;
+import com.example.ztna_server.runtime.connection.agent.PendingConnectRegistry;
+import com.example.ztna_server.runtime.connection.connector.ConnectorConnection;
+import com.example.ztna_server.runtime.connection.connector.ConnectorConnectionRegistry;
+import com.example.ztna_server.runtime.routing.RouteTarget;
+import com.example.ztna_server.runtime.routing.RoutingRegistry;
 import com.example.ztna_server.service.SessionLifecycleService;
+import com.example.ztna_server.runtime.relay.RelayEngine;
+import com.example.ztna_server.runtime.relay.RelayResult;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.*;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -28,157 +39,282 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
-    private final RoutingTable routingTable;
-    private final ConnectionLifecycleService connectionLifecycleService;
+    private final RoutingRegistry routingRegistry;
+    private final ConnectorConnectionRegistry connectorConnectionRegistry;
     private final SessionLifecycleService sessionLifecycleService;
     private final ConnectorRepository connectorRepository;
-    private final SessionManager sessionManager;
+    private final PendingConnectRegistry pendingConnectRegistry;
+    private final AgentConnectionRegistry agentConnectionRegistry;
+    private final RelayEngine relayEngine;
 
     private volatile String connectorId;
+    private volatile String connectionId;
     private volatile boolean registered = false;
-
-    @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt == WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE) {
-            log.info("[Server] WS handshake complete");
-        }
-        super.userEventTriggered(ctx, evt);
-    }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, WebSocketFrame frame) {
         if (frame instanceof PingWebSocketFrame ping) {
-            ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()));
+            ctx.writeAndFlush(new PongWebSocketFrame(
+                    ping.content().retain()
+            ));
             return;
         }
+
         if (frame instanceof CloseWebSocketFrame) {
             ctx.close();
             return;
         }
+
         if (!(frame instanceof BinaryWebSocketFrame bin)) {
-            log.info("BinaryWebSocketFrame unreceived");
+            log.warn("[Connector] Unsupported WebSocket frame");
             return;
         }
 
         ByteBuf data = bin.content();
-        byte type = data.getByte(0);
+        if (!data.isReadable()) {
+            log.warn("[Connector] Empty binary frame");
+            return;
+        }
+
+        byte type = data.getByte(data.readerIndex());
+
         try {
             switch (type) {
                 case FrameType.ROUTING_REQUEST -> handleRoutingReq(ctx, data);
-                case FrameType.CONNECT_ACK -> handleConnectAck(data);
-                case FrameType.DATA        -> handleData(data);
-                case FrameType.CLOSE       -> handleClose(ctx, data);
-                default -> log.warn("[Connector] Unknown frame: 0x{}", String.format("%02X", type));
+                case FrameType.CONNECT_ACK -> handleConnectAck(ctx, data);
+                case FrameType.DATA -> handleData(data);
+                case FrameType.CLOSE -> handleClose(ctx, data);
+                default -> log.warn("[Connector] Unknown frame type: 0x{}", String.format("%02X", type));
             }
+
         } catch (Exception e) {
-            log.error("[Connector] Lỗi xử lý frame 0x{}", String.format("%02X", type), e);
+            log.error("[Connector] Error processing frame: 0x{}, {}", String.format("%02X", type), e.getMessage());
         }
-
     }
-
 
     private void handleRoutingReq(ChannelHandlerContext ctx, ByteBuf buf) {
         byte[] data = new byte[buf.readableBytes()];
-        buf.readBytes(data);
+        buf.getBytes(buf.readerIndex(), data);
 
-        RoutingReqFrame frame = new RoutingReqFrame();
-        frame.decode(data);
+        RoutingReqFrame req = new RoutingReqFrame();
+        req.decode(data);
 
-        String connectString = frame.getConnectorId();
-
-        Connector connector = connectorRepository.findByConnectionString(connectString)
-                .orElse(null);
-
-        if (connector == null || !connector.isEnabled()) {
-            log.warn("[Connector] Từ chối connector không hợp lệ: {}", connectString);
+        String connectionString = req.getConnectorId();
+        if (connectionString == null || connectionString.isBlank()) {
+            log.warn("[Connector] Missing connectionString");
             ctx.close();
             return;
         }
 
-        this.connectorId = connector.getId().toString();
-
-        connectionLifecycleService.register(connectorId, ctx.channel());
-        this.registered = true;
-
-//        log.info("[Connector] {} registered", connectorId);
-
-        List<App> apps = routingTable.getAppsByConnector(connectorId);
-//        log.info("[Connector] {} has {} apps", connectorId, apps.size());
-
-        RoutingResFrame res = new RoutingResFrame();
-        res.setAppCount(apps.size());
-        res.setApps(apps);
-
-        ctx.writeAndFlush(new BinaryWebSocketFrame(
-                Unpooled.wrappedBuffer(res.encode())
-        ));
-    }
-
-
-    private void handleConnectAck(ByteBuf buf) {
-        byte[] bytes = new byte[buf.readableBytes()];
-        buf.readBytes(bytes);
-        ConnectAckFrame ack = new ConnectAckFrame();
-        ack.decode(bytes);
-        String streamId = ack.getStreamId();
-
-        Session session = sessionManager.get(streamId);
-        if (session == null) return;
-
-        if (ack.isOk()) {
-            session.setState(Session.State.READY);
-
-            String reqId = sessionManager.getReqIdByStreamId(streamId);
-
-            if (reqId != null && session.getUserChannel() != null) {
-                ResourceResFrame res = ResourceResFrame.ok(reqId, streamId);
-
-                session.getUserChannel().writeAndFlush(
-                        new BinaryWebSocketFrame(Unpooled.wrappedBuffer(res.encode()))
-                );
-                log.info("[Gateway] Đã gửi RESOURCE_RESPONSE cấp streamId={} cho reqId={}", streamId, reqId);
+        if (registered) {
+            if (!isCurrentConnection(ctx.channel())) {
+                log.warn("[Connector] Connection is no longer current: {}", connectorId);
+                ctx.close();
+                return;
             }
 
-        } else {
-            String reqId = sessionManager.getReqIdByStreamId(streamId);
-            ResourceResFrame res = ResourceResFrame.failed(reqId, ResourceResFrame.STATUS_APP_NOT_FOUND, "Connector connect failed");
-            session.getUserChannel().writeAndFlush(
-                    new BinaryWebSocketFrame(Unpooled.wrappedBuffer(res.encode()))
-            );
+            sendRoutingTable(ctx);
+            return;
         }
+
+        Connector connector = connectorRepository.findByConnectionString(connectionString).orElse(null);
+
+        if (connector == null || !connector.isEnabled()) {
+            log.warn("[Connector] Invalid or disabled connector: {}", connectionString);
+            ctx.close();
+            return;
+        }
+
+        String newConnectorId = connector.getId().toString();
+        ConnectorConnection oldConnection = connectorConnectionRegistry.getByConnectorId(newConnectorId);
+
+        if (oldConnection != null && oldConnection.getChannel() != ctx.channel()) {
+            log.warn("[Connector] Replacing old connection: connectorId={}, oldConnection={}",
+                    newConnectorId, oldConnection.getConnectionId());
+
+            sessionLifecycleService.onConnectorDisconnect(oldConnection.getConnectionId());
+        }
+
+        // Đăng ký connection mới.
+        ConnectorConnection connection = connectorConnectionRegistry.register(newConnectorId, ctx.channel());
+
+        this.connectorId = newConnectorId;
+        this.connectionId = connection.getConnectionId();
+        this.registered = true;
+
+        log.info(
+                "[Connector] Registered: connectorId={}, connectionId={}",
+                connectorId,
+                connectionId
+        );
+
+        // Gửi routing table lần đầu.
+        sendRoutingTable(ctx);
+    }
+
+    private void sendRoutingTable(ChannelHandlerContext ctx) {
+
+        if (!isCurrentConnection(ctx.channel())) {
+            return;
+        }
+
+        List<RouteTarget> targets =
+                routingRegistry.getByConnectorId(connectorId);
+
+        List<App> apps = targets.stream()
+                .map(target -> new App(
+                        target.resourceId(),
+                        target.resourceName(),
+                        target.host(),
+                        target.port()
+                ))
+                .toList();
+
+        RoutingResFrame response = new RoutingResFrame();
+
+        response.setAppCount(apps.size());
+        response.setApps(apps);
+
+        ctx.writeAndFlush(
+                new BinaryWebSocketFrame(
+                        Unpooled.wrappedBuffer(response.encode())
+                )
+        );
+
+        log.info(
+                "[Connector] Routing table sent: connectorId={}, apps={}",
+                connectorId,
+                apps.size()
+        );
+    }
+
+    private void handleConnectAck(ChannelHandlerContext ctx, ByteBuf buf) {
+        if (!isCurrentConnection(ctx.channel())) {
+            log.warn("[Connector] Ignored CONNECT_ACK from old connection");
+            return;
+        }
+
+        ConnectAckFrame ack = new ConnectAckFrame();
+        byte[] data = new byte[buf.readableBytes()];
+        buf.getBytes(buf.readerIndex(), data);
+        ack.decode(data);
+
+        String streamId = ack.getStreamId();
+        log.info("[Connector] CONNECT_ACK: streamId={}, ok={}", streamId, ack.isOk());
+
+        PendingConnect pending = pendingConnectRegistry.get(streamId);
+        if (pending == null) {
+            sendCloseToConnector(ctx.channel(), streamId);
+            return;
+        }
+
+        if (!ack.isOk()) {
+            pendingConnectRegistry.remove(streamId);
+            AgentConnection agent = agentConnectionRegistry.getByUserId(pending.getUserId());
+            if (agent != null && agent.isActive()) {
+                sendResourceFail(agent.getChannel(), pending.getRequestId(), "Connector từ chối kết nối");
+            }
+            return;
+        }
+
+        sessionLifecycleService.openSession(streamId);
     }
 
     private void handleData(ByteBuf buf) {
-        sessionLifecycleService.forwardToClient(buf);
+        byte[] data = new byte[buf.readableBytes()];
+        buf.getBytes(buf.readerIndex(), data);
+
+        DataFrame frame = new DataFrame();
+        frame.decode(data);
+
+        RelayResult result = relayEngine.forwardToAgent(frame);
+
+        if (result != RelayResult.SUCCESS) {
+            log.warn("[Connector] DATA relay failed: streamId={}, result={}", frame.getStreamId(), result);
+
+//            sessionLifecycleService.onRelayFailure(
+//                    ctx.channel(),
+//                    frame.getStreamId(),
+//                    result
+//            );
+        }
     }
 
     private void handleClose(ChannelHandlerContext ctx, ByteBuf buf) {
+        if (!isCurrentConnection(ctx.channel())) {
+            return;
+        }
         byte[] data = new byte[buf.readableBytes()];
-        buf.readBytes(data);
-
+        buf.getBytes(buf.readerIndex(), data);
         CloseFrame frame = new CloseFrame();
         frame.decode(data);
-
-        String streamId = frame.getStreamId();
-        String reason = frame.getReasonText();
-
-        log.info("[Connector] CLOSE stream={} reason={}", streamId, reason);
-        sessionLifecycleService.sessionDisconnect(streamId, "APP_CLOSED: " + reason);
+        log.info("[Connector] CLOSE: streamId={}, reason={}", frame.getStreamId(), frame.getReasonText());
+        sessionLifecycleService.closeSession(frame.getStreamId(), "Connector close");
     }
 
+
+    private boolean isCurrentConnection(Channel channel) {
+        if (!registered || connectorId == null) {
+            return false;
+        }
+        ConnectorConnection current = connectorConnectionRegistry.getByConnectorId(connectorId);
+        return current != null && current.getChannel() == channel && current.getConnectionId().equals(connectionId);
+    }
 
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        if (connectorId == null || !registered) return;
+        if (registered && connectorId != null && connectionId != null) {
+            log.info("[Connector] Disconnected: connectorId={}, connectionId={}", connectorId, connectionId);
+            ConnectorConnection removed = connectorConnectionRegistry.getByConnectorId(connectorId);
+            if (removed != null) {
+                sessionLifecycleService.onConnectorDisconnect(connectionId);
+            }
+        }
 
-        log.info("[Connector] {} disconnected", connectorId);
-        connectionLifecycleService.disconnect(connectorId);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("[Connector] Lỗi", cause);
+    public void exceptionCaught(
+            ChannelHandlerContext ctx,
+            Throwable cause
+    ) {
+
+        log.error("[Connector] Connection error", cause);
         ctx.close();
+    }
+
+    private void sendCloseToConnector(Channel connectorChannel, String streamId) {
+        if (connectorChannel == null || !connectorChannel.isActive()) return;
+        try {
+            CloseFrame close = new CloseFrame(streamId, CloseFrame.REASON_APP_CLOSED);
+            connectorChannel.writeAndFlush(new BinaryWebSocketFrame(
+                    Unpooled.wrappedBuffer(close.encode())
+            )).addListener(f -> {
+                if (!f.isSuccess()) {
+                    log.warn("[Connector] Cannot send CLOSE for streamId={}: {}",
+                            streamId, f.cause().getMessage());
+                }
+            });
+        } catch (Exception e) {
+            log.warn("[Connector] Error building CLOSE for streamId={}: {}", streamId, e.getMessage());
+        }
+    }
+
+    private void sendResourceFail(Channel agentChannel, String requestId, String reason) {
+        if (agentChannel == null || !agentChannel.isActive()) return;
+        try {
+            ResourceAccessFrame frame = new ResourceAccessFrame(requestId, reason);
+            agentChannel.writeAndFlush(new BinaryWebSocketFrame(
+                    Unpooled.wrappedBuffer(frame.encode())
+            )).addListener(f -> {
+                if (!f.isSuccess()) {
+                    log.warn("[Connector] Cannot send FAIL to agent: reqId={}, err={}",
+                            requestId, f.cause().getMessage());
+                }
+            });
+        } catch (Exception e) {
+            log.warn("[Connector] Error building FAIL: reqId={}, err={}", requestId, e.getMessage());
+        }
     }
 }

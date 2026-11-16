@@ -177,4 +177,13 @@ public class RuleService {
                 null
         );
     }
+
+    public boolean hasAccess(UUID userId, UUID resourceId) {
+
+        return ruleRepository.hasAccess(
+                userId,
+                resourceId,
+                Instant.now()
+        );
+    }
 }

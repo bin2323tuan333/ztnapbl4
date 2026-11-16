@@ -1,4 +1,4 @@
-package com.example.ztna_server.routes;
+package com.example.ztna_server.dto.internal;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

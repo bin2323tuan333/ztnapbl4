@@ -1,6 +1,6 @@
 package com.example.ztna_server.service;
 
-import com.example.ztna_server.routes.App;
+import com.example.ztna_server.dto.internal.App;
 import com.example.ztna_server.dto.request.ResourceRequest;
 import com.example.ztna_server.dto.response.resource.AdminResourceDetailResponse;
 import com.example.ztna_server.dto.response.resource.AdminResourceSummaryResponse;
@@ -13,9 +13,11 @@ import com.example.ztna_server.mapper.ResourceMapper;
 import com.example.ztna_server.protocol.frames.RoutingResFrame;
 import com.example.ztna_server.repository.ConnectorRepository;
 import com.example.ztna_server.repository.ResourceRepository;
-import com.example.ztna_server.routes.ConnecterRegister;
-import com.example.ztna_server.routes.RoutingManager;
-import com.example.ztna_server.routes.RoutingTable;
+import com.example.ztna_server.runtime.connection.connector.ConnectorConnection;
+import com.example.ztna_server.runtime.connection.connector.ConnectorConnectionRegistry;
+import com.example.ztna_server.runtime.routing.RouteTarget;
+import com.example.ztna_server.runtime.routing.RoutingBootstrap;
+import com.example.ztna_server.runtime.routing.RoutingRegistry;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -37,11 +39,12 @@ import java.util.UUID;
 public class AdminResourceService {
     private final ResourceRepository resourceRepository;
     private final ConnectorRepository connectorRepository;
-    private final ConnecterRegister connecterRegister;
-    private final RoutingManager routingManager;
-    private final RoutingTable routingTable;
     private final ResourceMapper resourceMapper;
-    private final AuditService auditService;   
+    private final AuditService auditService;
+
+    private final RoutingRegistry routingRegistry;              // tra cứu in-memory
+    private final RoutingBootstrap routingBootstrap;             // refresh từ DB
+    private final ConnectorConnectionRegistry connectorConnectionRegistry;
 
     @Transactional(readOnly = true)
     public List<AdminResourceSummaryResponse> getResources() {
@@ -179,17 +182,29 @@ public class AdminResourceService {
 
 
     private void refreshAndPush(Set<UUID> connectorIds) {
-        routingManager.refreshRoutingTable();
+        routingBootstrap.refresh();
+
         for (UUID cid : connectorIds) {
             String key = cid.toString();
-            Channel channel = connecterRegister.getChannel(key);
-            if (channel == null || !channel.isActive()) continue;
 
-            List<App> apps = routingTable.getAppsByConnector(key);
+            ConnectorConnection cc = connectorConnectionRegistry.getByConnectorId(key);
+            if (cc == null || !cc.isActive()) {
+                continue;
+            }
+
+            List<RouteTarget> targets = routingRegistry.getByConnectorId(key);
+            List<App> apps = targets.stream()
+                    .map(this::toApp)
+                    .toList();
+
             RoutingResFrame res = new RoutingResFrame();
             res.setAppCount(apps.size());
             res.setApps(apps);
-            channel.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(res.encode())));
+
+            cc.getChannel().writeAndFlush(new BinaryWebSocketFrame(
+                    Unpooled.wrappedBuffer(res.encode())
+            ));
+
             log.info("[ADMIN] Đã gửi bảng định tuyến mới ({} app) cho connector {}", apps.size(), key);
         }
     }
@@ -221,6 +236,15 @@ public class AdminResourceService {
                 .connectorZone(c.getName())
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())
+                .build();
+    }
+
+    private App toApp(RouteTarget t) {
+        return App.builder()
+                .id(t.resourceId())
+                .name(t.resourceName())
+                .host(t.host())
+                .port(t.port())
                 .build();
     }
 }

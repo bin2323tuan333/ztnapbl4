@@ -1,18 +1,23 @@
+
 package com.example.ztna_server.service;
 
-import com.example.ztna_server.entity.Connector;
+import com.example.ztna_server.entity.User;
+import com.example.ztna_server.protocol.frames.CloseFrame;
+import com.example.ztna_server.protocol.frames.ResourceAccessFrame;
+import com.example.ztna_server.protocol.frames.ResourceResFrame;
 import com.example.ztna_server.repository.ConnectorRepository;
 import com.example.ztna_server.repository.ResourceRepository;
-import com.example.ztna_server.routes.App;
-import com.example.ztna_server.entity.User;
-import com.example.ztna_server.enums.Decision;
-import com.example.ztna_server.protocol.frames.CloseFrame;
-import com.example.ztna_server.protocol.frames.ConnectFrame;
-import com.example.ztna_server.protocol.frames.DataFrame;
-import com.example.ztna_server.protocol.frames.HttpResFrame;
 import com.example.ztna_server.repository.UserRepository;
-import com.example.ztna_server.routes.*;
-import io.netty.buffer.ByteBuf;
+import com.example.ztna_server.runtime.connection.agent.AgentConnection;
+import com.example.ztna_server.runtime.connection.agent.AgentConnectionRegistry;
+import com.example.ztna_server.runtime.connection.agent.PendingConnect;
+import com.example.ztna_server.runtime.connection.agent.PendingConnectRegistry;
+import com.example.ztna_server.runtime.connection.connector.ConnectorConnection;
+import com.example.ztna_server.runtime.connection.connector.ConnectorConnectionRegistry;
+import com.example.ztna_server.runtime.routing.RoutingRegistry;
+import com.example.ztna_server.runtime.session.SessionContext;
+import com.example.ztna_server.runtime.session.SessionManager;
+import com.example.ztna_server.runtime.session.SessionState;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -20,9 +25,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,314 +32,164 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class SessionLifecycleService {
+    private final RoutingRegistry routingRegistry;
+    private final ConnectorConnectionRegistry connectorConnectionRegistry;
+    private final AgentConnectionRegistry agentConnectionRegistry;
+
+    private final PendingConnectRegistry pendingConnectRegistry;
     private final SessionManager sessionManager;
-    private final ConnecterRegister connecterRegister;
-    private final RoutingTable routingTable;
-    private final AccessLogService accessLogService;
+
     private final UserRepository userRepository;
-    private final ConnectorRepository connectorRepository;
     private final ResourceRepository resourceRepository;
+    private final ConnectorRepository connectorRepository;
 
-    public Session openSession(String reqId, String userId, String resourceId, Channel clientChannel) {
-        AppRoute route = routingTable.getAppRoute(resourceId);
-        User user = userRepository.findById(UUID.fromString(userId)).orElse(null);
-        if (user == null) return null;
+    private final RuleService ruleService;
+    private final AccessLogService accessLogService;
 
-        if (route == null) {
-            log.warn("[Lifecycle] App không tồn tại: {}", resourceId);
 
-            accessLogService.log(
-                    UUID.fromString(userId),
-                    getIpAddress(clientChannel),
-                    user.getFullName(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    Decision.DENY,
-                    "App không tồn tại"
-            );
-            return null;
+    public boolean openSession(String streamId) {
+        PendingConnect c = pendingConnectRegistry.get(streamId);
+        if (c == null) {
+            return false;
         }
 
-        String connectorId = route.getConnectorId();
-        Connector connector = connectorRepository.findById(UUID.fromString(connectorId)).orElse(null);
-        if (connector == null) {
-            return null;
+        AgentConnection agentConnection = agentConnectionRegistry.getByUserId(c.getUserId());
+        if (agentConnection == null || !agentConnection.isActive()) {
+            pendingConnectRegistry.remove(streamId);
+            return false;
         }
 
-        App app = route.getApp();
-
-        // user bi khoa thi ko cho truy cap tiep
-        if (!user.getEnabled()) {
-            log.warn("[Lifecycle] User {} đã bị khóa, từ chối app {}", userId, resourceId);
-            accessLogService.log(
-                    user.getId(),
-                    getIpAddress(clientChannel),
-                    user.getFullName(),
-                    UUID.fromString(app.getId()),
-                    app.getName(),
-                    app.getHost(),
-                    UUID.fromString(connectorId),
-                    connector.getName(),
-                    Decision.DENY,
-                    "Tài khoản đã bị khóa"
-            );
-            return null;
+        ConnectorConnection connectorConnection = connectorConnectionRegistry.getByConnectorId(c.getConnectorId());
+        if (connectorConnection == null || !connectorConnection.isActive()) {
+            pendingConnectRegistry.remove(streamId);
+            sendResourceFail(agentConnection.getChannel(), c.getRequestId(), "Connector offline");
+            return false;
         }
 
-        //User phải thuộc ít nhất một rule đang bật có chứa app này
-        if (resourceRepository.countAccess(user.getId(), UUID.fromString(resourceId), Instant.now()) == 0) {
-            log.warn("[Lifecycle] User {} không có quyền vào app {}", userId, resourceId);
-            accessLogService.log(
-                    user.getId(),
-                    getIpAddress(clientChannel),
-                    user.getFullName(),
-                    UUID.fromString(app.getId()),
-                    app.getName(),
-                    app.getHost(),
-                    UUID.fromString(connectorId),
-                    connector.getName(),
-                    Decision.DENY,
-                    "Không có quyền truy cập ứng dụng"
-            );
-            return null;
+        User user = userRepository.findById(UUID.fromString(c.getUserId())).orElse(null);
+        if (user == null || !Boolean.TRUE.equals(user.getEnabled())) {
+            pendingConnectRegistry.remove(streamId);
+            sendResourceFail(agentConnection.getChannel(), c.getRequestId(), "Tài khoản đã bị khóa");
+            return false;
         }
 
-
-        // neu dong connector thi ko cho truy cap tiep
-        Channel connCh = connecterRegister.getChannel(connectorId);
-        if (connCh == null || !connCh.isActive()) {
-            log.warn("[Lifecycle] Connector {} offline", connectorId);
-
-            accessLogService.log(
-                    UUID.fromString(userId),
-                    getIpAddress(clientChannel),
-                    user.getFullName(),
-                    UUID.fromString(app.getId()),
-                    app.getName(),
-                    app.getHost(),
-                    UUID.fromString(connectorId),
-                    connector.getName(),
-                    Decision.DENY,
-                    "Connector mất kết nối"
-            );
-            return null;
-        }
-
-        String streamId = UUID.randomUUID().toString();
-
-        Session session = Session.builder()
+        SessionContext session = SessionContext.builder()
                 .streamId(streamId)
-                .userId(userId)
-                .appId(resourceId)
-                .connectorId(connectorId)
-                .userChannel(clientChannel)
-                .wsChannel(connCh)
-                .state(Session.State.INIT)
-                .openedAt(System.currentTimeMillis())
+                .userId(c.getUserId())
+                .connectorId(c.getConnectorId())
+                .resourceId(c.getResourceId())
+                .agentChannel(agentConnection.getChannel())
+                .connectorChannel(connectorConnection.getChannel())
+                .state(SessionState.ACTIVE)
                 .build();
 
-        sessionManager.add(reqId, streamId, session);
+        sessionManager.add(session);
+        pendingConnectRegistry.remove(streamId);
 
-        ConnectFrame cf = new ConnectFrame(streamId, resourceId);
-        connCh.writeAndFlush(new BinaryWebSocketFrame(
-                Unpooled.wrappedBuffer(cf.encode())
-        ));
-
-        session.setState(Session.State.OPENING);
-
-        String username = userRepository.findById(UUID.fromString(userId))
-                .map(User::getUsername)
-                .orElse("Unknown User");
-
-
-//        accessLogService.log(
-//                UUID.fromString(userId),
-//                getIpAddress(clientChannel),
-//                user.getFullName(),
-//                UUID.fromString(app.getId()),
-//                app.getName(),
-//                app.getHost(),
-//                UUID.fromString(connectorId),
-//                connector.getName(),
-//                Decision.ALLOW,
-//                "Kết nối thành công"
-//        );
-        
-        log.info("[Lifecycle] OPEN stream={} user={} app={} conn={}", streamId, userId, resourceId, connectorId);
-
-        return session;
-    }
-
-    public void sessionDisconnect(String streamId, String reason) {
-        Session session = sessionManager.remove(streamId);
-        if (session == null) return;
-
-        session.setCloseReason(reason);
-        log.info("Close session: {}", reason);
-        session.setState(Session.State.CLOSING);
-        closeClient(session);
-        notifyConnector(session);
-        session.setState(Session.State.CLOSED);
-    }
-
-    private void closeClient(Session session) {
-        Channel userCh = session.getUserChannel();
-        if (userCh == null || !userCh.isActive()) return;
-
-        CloseFrame cf = new CloseFrame();
-        cf.setStreamId(session.getStreamId());
-
-        userCh.writeAndFlush(new BinaryWebSocketFrame(
-                Unpooled.wrappedBuffer(cf.encode())
-        ));
-    }
-
-    private void notifyConnector(Session session) {
-        Channel connCh = session.getWsChannel();
-        if (connCh == null || !connCh.isActive()) return;
-
-        CloseFrame cf = new CloseFrame();
-        cf.setStreamId(session.getStreamId());
-
-        connCh.writeAndFlush(new BinaryWebSocketFrame(
-                Unpooled.wrappedBuffer(cf.encode())
-        ));
-    }
-
-    public void forwardToClient(ByteBuf buf) {
-        byte[] data = new byte[buf.readableBytes()];
-        buf.readBytes(data);
-
-        DataFrame frame = new DataFrame();
-        frame.decode(data);
-
-        String streamId = frame.getStreamId();
-        byte[] payload = frame.getData();
-
-        if (payload == null || payload.length == 0) return;
-
-        Session session = sessionManager.get(streamId);
-        if (session == null || !(session.getState() == Session.State.READY)) {
-            log.warn("[Lifecycle] Stream {} không tồn tại hoặc chưa READY", streamId);
-            return;
-        }
-
-        Channel clientCh = session.getUserChannel();
-        if (clientCh == null || !clientCh.isActive()) {
-            sessionDisconnect(streamId, "USER NULL");
-            return;
-        }
-
-        clientCh.writeAndFlush(new BinaryWebSocketFrame(
-                Unpooled.wrappedBuffer(frame.encode())
-        )).addListener(future -> {
-            if (future.isSuccess()) {
-                log.info("[Lifecycle] ✅ Connector → Client: stream={}, {} bytes", streamId, payload.length);
-            } else {
-                log.error("[Lifecycle] ❌ Gửi thất bại tới Client: stream={}", streamId);
+        agentConnection.getChannel().writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(
+                new ResourceResFrame(c.getRequestId(), streamId, ResourceResFrame.STATUS_OK, "").encode()
+        ))).addListener(f -> {
+            if (!f.isSuccess()) {
+                sessionManager.failSession(streamId, "Cannot resend to agent");
             }
         });
+
+        log.info("[Lifecycle] SESSION_OPENED streamId={}, user={}, app={}", streamId, c.getUserId(), c.getResourceId());
+        return true;
     }
 
-    public void forwardToConnector(ByteBuf buf) {
-        byte[] data = new byte[buf.readableBytes()];
-        buf.readBytes(data);
-
-        DataFrame frame = new DataFrame();
-        frame.decode(data);
-
-        String streamId = frame.getStreamId();
-        byte[] payload = frame.getData();
-
-        log.info("[Lifecycle] Nhận DATA từ Agent: stream={}, len={}", streamId, payload == null ? 0 : payload.length);
-
-        if (payload == null || payload.length == 0) return;
-
-        Session session = sessionManager.get(streamId);
+    public void closeSession(String streamId, String reason) {
+        SessionContext session = sessionManager.get(streamId);
         if (session == null) {
-            log.warn("[Lifecycle] ❌ Stream {} không tồn tại.", streamId);
+            return;
+        }
+        log.info("[Lifecycle] Closing session: stream={}, reason={}", streamId, reason);
+        sendClose(session.getAgentChannel(), streamId);
+        sendClose(session.getConnectorChannel(), streamId);
+    }
+
+
+    private void sendClose(Channel channel, String streamId) {
+        if (channel == null || !channel.isActive()) {
             return;
         }
 
-        Channel conChannel = session.getWsChannel();
-        if (conChannel == null || !conChannel.isActive()) {
-            sessionDisconnect(streamId, "CONNECTOR NULL");
-            return;
-        }
+        CloseFrame frame = new CloseFrame();
+        frame.setStreamId(streamId);
 
-        conChannel.writeAndFlush(new BinaryWebSocketFrame(
+        channel.writeAndFlush(new BinaryWebSocketFrame(
                 Unpooled.wrappedBuffer(frame.encode())
-        )).addListener(future -> {
-            if (future.isSuccess()) {
-                log.info("[Lifecycle] Server → Connector: stream={}, {} bytes", streamId, payload.length);
-            } else {
-                log.error("[Lifecycle] Gửi thất bại tới Connector: stream={}", streamId);
-            }
-        });
+        ));
     }
 
-    public void onClientDisconnect(String userId) {
-        List<Session> list = sessionManager.getByUser(userId);
-        log.info("[Lifecycle] Client {} disconnected, closing {} sessions", userId, list.size());
-        for (Session item : list) {
-            sessionDisconnect(item.getStreamId(), "CLIENT DISCONNECT");
+
+    public void onAgentDisconnect(String userId) {
+        List<PendingConnect> pendingList = pendingConnectRegistry.getByUserId(userId);
+        for (PendingConnect pending : pendingList) {
+            pendingConnectRegistry.remove(pending.getStreamId());
+        }
+
+        List<SessionContext> sessions = sessionManager.getByUserId(userId);
+        log.info("[Lifecycle] Agent userId {} disconnected, closing {} sessions", userId, sessions.size());
+        for (SessionContext session : sessions) {
+            closeSession(session.getStreamId(), "AGENT_DISCONNECTED");
         }
     }
+
 
     public void onConnectorDisconnect(String connectorId) {
-        List<Session> list = sessionManager.getByConnector(connectorId);
-        log.info("[Lifecycle] Connector {} disconnected, closing {} sessions",connectorId, list.size());
-        for (Session item : list) {
-            sessionDisconnect(item.getStreamId(), "CONNECTOR DISCONNECT");
+        List<PendingConnect> pendingList = pendingConnectRegistry.getByConnectorId(connectorId);
+
+        for (PendingConnect pending : pendingList) {
+            pendingConnectRegistry.remove(pending.getStreamId());
+            AgentConnection agentConnection = agentConnectionRegistry.getByUserId(pending.getUserId());
+            sendResourceFail(agentConnection.getChannel(), pending.getRequestId(), "Connector đã mất kết nối");
+        }
+
+        List<SessionContext> sessions = sessionManager.getByConnectorId(connectorId);
+        log.info("[Lifecycle] Connector connection {} disconnected, closing {} sessions", connectorId, sessions.size());
+        for (SessionContext session : sessions) {
+            closeSession(session.getStreamId(), "CONNECTOR_DISCONNECTED");
         }
     }
 
-    public void onConnectAckOk(String streamId) {
-        Session session = sessionManager.get(streamId);
-        if (session == null) {
-            log.warn("[Lifecycle] CONNECT_ACK cho stream không tồn tại: {}", streamId);
+
+
+
+    private void sendResourceSuccess(Channel channel, String requestId, String streamId) {
+        if (channel == null || !channel.isActive()) {
             return;
         }
-
-        Channel userChannel = session.getUserChannel();
-        HttpResFrame resFrame = new HttpResFrame(
-                sessionManager.getReqIdByStreamId(streamId),
-                streamId,
-                HttpResFrame.STATUS_OK,
-                "");
-        session.setState(Session.State.READY);
-        session.touch();
-        log.info("[Lifecycle] Stream {} READY", streamId);
+        ResourceResFrame response = new ResourceResFrame(requestId, streamId, ResourceResFrame.STATUS_OK, "");
+        channel.writeAndFlush(new BinaryWebSocketFrame(
+                Unpooled.wrappedBuffer(response.encode())
+        ));
     }
 
-    public void onConnectAckFailed(String streamId, String reason) {
-        Session session = sessionManager.get(streamId);
-        if (session == null) {
-            log.warn("[Lifecycle] CONNECT_ACK cho stream không tồn tại: {}", streamId);
+
+    private void sendResourceFail(Channel channel, String requestId, String reason) {
+        if (channel == null || !channel.isActive()) {
             return;
         }
-
-        Channel userChannel = session.getUserChannel();
-        HttpResFrame resFrame = new HttpResFrame(
-                sessionManager.getReqIdByStreamId(streamId),
-                streamId,
-                HttpResFrame.STATUS_OK,
-                reason);
-        sessionDisconnect(streamId, "CONNECT_FAILED: " + reason);
+        ResourceResFrame response = new ResourceResFrame(requestId, "", ResourceResFrame.STATUS_ERROR, reason);
+        channel.writeAndFlush(new BinaryWebSocketFrame(
+                Unpooled.wrappedBuffer(response.encode())
+        ));
     }
+
+
 
     public static String getIpAddress(Channel channel) {
-        if (channel == null) {
+        if (channel == null || channel.remoteAddress() == null) {
             return "Unknown";
         }
-        SocketAddress socketAddress = channel.remoteAddress();
-        if (socketAddress instanceof InetSocketAddress) {
-            InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
-            return inetSocketAddress.getAddress().getHostAddress();
+
+        if (channel.remoteAddress() instanceof java.net.InetSocketAddress address) {
+            return address.getAddress() != null
+                    ? address.getAddress().getHostAddress()
+                    : address.getHostString();
         }
-        return socketAddress != null ? socketAddress.toString() : "Unknown";
+
+        return channel.remoteAddress().toString();
     }
 }

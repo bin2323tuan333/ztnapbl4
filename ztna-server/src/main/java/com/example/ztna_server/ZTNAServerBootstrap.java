@@ -1,7 +1,7 @@
 package com.example.ztna_server;
 
 import com.example.ztna_server.netty.ConnectorWsHandler;
-import com.example.ztna_server.netty.ResourceWsHandler;
+import com.example.ztna_server.netty.AgentWsHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -32,7 +32,7 @@ public class ZTNAServerBootstrap {
     private static final int MAX_FRAME_SIZE = 1024 * 1024;
 
     private final ObjectProvider<ConnectorWsHandler> connectorProvider;
-    private final ObjectProvider<ResourceWsHandler> appProvider;
+    private final ObjectProvider<AgentWsHandler> appProvider;
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
