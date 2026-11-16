@@ -3,6 +3,7 @@ import { Download, Filter } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { vi } from 'date-fns/locale';
+import type { ResourceOption } from '../api/reportApi';
 
 interface Props {
     fromDate: string;
@@ -11,11 +12,12 @@ interface Props {
     setToDate: (val: string) => void;
     selectedApp: string;
     setSelectedApp: (val: string) => void;
+    resources: ResourceOption[];
     onExport: () => void;
 }
 
 export const ReportFilters = ({
-    fromDate, setFromDate, toDate, setToDate, selectedApp, setSelectedApp, onExport
+    fromDate, setFromDate, toDate, setToDate, selectedApp, setSelectedApp, resources, onExport
 }: Props) => {
 
     // 🔥 SỬA Ở ĐÂY: Trả về Date | undefined thay vì Date | null
@@ -65,8 +67,9 @@ export const ReportFilters = ({
                 <Filter size={16} className="text-muted" />
                 <select value={selectedApp} onChange={(e) => setSelectedApp(e.target.value)} className="form-input">
                     <option value="ALL">Tất cả ứng dụng</option>
-                    <option value="mysql">MySQL</option>
-                    <option value="aws">AWS Console</option>
+                    {resources.map(r => (
+                        <option key={r.id} value={r.id}>{r.name} ({r.type})</option>
+                    ))}
                 </select>
             </div>
 

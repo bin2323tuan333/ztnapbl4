@@ -39,7 +39,7 @@ export const TrendLineChart = ({ data }: { data: any[] }) => {
                         <Line
                             type="monotone"
                             dataKey="requests"
-                            name="Truy cập thành công"
+                            name="Cho phép"
                             stroke="#3b82f6"
                             strokeWidth={3}
                             dot={{ r: 4, strokeWidth: 2 }}
