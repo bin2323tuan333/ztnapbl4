@@ -10,11 +10,17 @@ import '../styles/Reports.css';
 // Bọc ô CSV trong dấu ngoặc kép, nhân đôi dấu " bên trong
 const csvCell = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
 
+const formatCsvTime = (iso: string) => {
+    const d = new Date(iso);
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+};
+
 // Tạo file CSV từ log và cho trình duyệt tải về
 const exportCsv = (logs: LogRow[]) => {
     const header = ['Thời gian', 'Người dùng', 'Ứng dụng', 'Giao thức', 'Trạng thái', 'Lý do'];
     const rows = logs.map(l => [
-        new Date(l.time).toLocaleString('vi-VN'),
+        formatCsvTime(l.time),
         l.user, l.app, l.protocol,
         l.status === 'ALLOW' ? 'Cho phép' : 'Bị chặn',
         l.reason,
