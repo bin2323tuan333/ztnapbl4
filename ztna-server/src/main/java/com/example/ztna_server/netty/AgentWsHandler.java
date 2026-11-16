@@ -222,12 +222,10 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
         }
 
         UUID userId = UUID.fromString(uid);
-        User authed = userRepository.findById(userId)
-                .orElse(null);
+        User authed = userRepository.findById(userId).orElse(null);
 
         if (authed == null || !authed.getEnabled()) {
-            log.warn("[Lifecycle] User not found or disabled: uid={}, reqId={}",
-                    uid, reqId);
+            log.warn("[Lifecycle] User not found or disabled: uid={}, reqId={}", uid, reqId);
             accessLogService.log(
                     userId,
                     ip,
@@ -251,73 +249,23 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
         }
 
 
+        AgentConnection currentForUId = agentConnectionRegistry.getByUserId(uid);
         if (this.userId == null) {
-            AgentConnection current = agentConnectionRegistry.getByUserId(uid);
-            if (current != null && current.getChannel() != ctx.channel()) {
-                log.warn("[Lifecycle] User already connected: uid={}, reqId={}",
-                        uid, reqId);
-
-                accessLogService.log(
-                        userId,
-                        ip,
-                        authed.getFullName(),
-                        resource.getId(),
-                        resource.getName(),
-                        resource.getHost(),
-                        connector.getId(),
-                        connector.getName(),
-                        Decision.DENY,
-                        "User already connected"
-                );
-
-                sendHttpFail(
-                        ctx,
-                        reqId,
-                        HttpResFrame.STATUS_AUTH_FAILED,
-                        "User already connected"
-                );
-                return;
-            }
-            if (current == null) {
-                AgentConnection registered = agentConnectionRegistry.register(uid, ctx.channel());
-                log.info("[Lifecycle] Agent registered: user={}, connection={}",
-                        uid, registered.getConnectionId());
+            if (currentForUId == null) {
+                agentConnectionRegistry.register(uid, ctx.channel());
+                log.info("Ket noi thanh cong tu {}", uid);
+            } else {
+                agentConnectionRegistry.removeByUserId(uid);
+                agentConnectionRegistry.register(uid, ctx.channel());
+                log.info("Ket noi lai tu {}", uid);
             }
             this.userId = uid;
         } else if (!this.userId.equals(uid)) {
-            log.warn("[Lifecycle] User mismatch: expected={}, received={}, reqId={}",
-                    this.userId, uid, reqId);
-
-            accessLogService.log(
-                    userId,
-                    ip,
-                    authed.getFullName(),
-                    resource.getId(),
-                    resource.getName(),
-                    resource.getHost(),
-                    connector.getId(),
-                    connector.getName(),
-                    Decision.DENY,
-                    "User mismatch"
-            );
-
-            sendHttpFail(
-                    ctx,
-                    reqId,
-                    HttpResFrame.STATUS_AUTH_FAILED,
-                    "User mismatch"
-            );
-            return;
+            log.warn("[Lifecycle] User mismatch: expected={}, received={}, reqId={}", this.userId, uid, reqId);
+            agentConnectionRegistry.changeUser(this.userId, uid);
         }
 
-        log.info(
-                "[Lifecycle] HTTP_ACCESS OK: reqId={}, user={}, resource={}, connector={}, ip={}",
-                reqId,
-                uid,
-                resource.getName(),
-                connector.getName(),
-                ip
-        );
+        log.info("[Lifecycle] HTTP_ACCESS OK: reqId={}, user={}, resource={}, connector={}, ip={}", reqId, uid, resource.getName(), connector.getName(), ip);
 
         accessLogService.log(
                 userId,

@@ -38,15 +38,15 @@ public class AuthService {
 
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> {
-                    auditService.log(
-                            null,
-                            request.getUsername(),
-                            "LOGIN_FAILED",
-                            TargetType.USER,
-                            null,
-                            request.getUsername(),
-                            ip
-                    );
+//                    auditService.log(
+//                            null,
+//                            request.getUsername(),
+//                            "LOGIN_FAILED",
+//                            TargetType.USER,
+//                            null,
+//                            request.getUsername(),
+//                            ip
+//                    );
                     return new AppException(ErrorCode.INVALID_CREDENTIALS);
                 });
 

@@ -52,6 +52,15 @@ public class AgentConnectionRegistry {
         if (c != null) remove(c.getConnectionId());
     }
 
+    public void changeUser(String userId, String newUserId) {
+        AgentConnection agentConnection;
+        synchronized (this) {
+            agentConnection = byUserId.get(userId);
+            byUserId.remove(userId);
+            byUserId.put(userId, agentConnection);
+        }
+    }
+
 
     public AgentConnection getByConnectionId(String connectionId) {
         return byConnectionId.get(connectionId);
