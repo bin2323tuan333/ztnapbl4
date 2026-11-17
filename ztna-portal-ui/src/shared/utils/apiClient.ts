@@ -1,4 +1,4 @@
-const BACKEND_URL = 'http://localhost:443';
+const BACKEND_URL = 'http://172.31.99.62:443';
 
 const request = async (path: string, method: string, body?: any): Promise<any> => {
     const token = localStorage.getItem('accessToken');

@@ -1,3 +1,0 @@
-server:
-  url: ${SERVER_URL}
-  token: ${CONNECTOR_TOKEN}

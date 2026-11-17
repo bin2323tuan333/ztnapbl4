@@ -1,0 +1,68 @@
+
+services:
+  connector-app:
+    image: connector-service:1.0.0
+    container_name: zone2-connector
+    environment:
+      CONNECTOR_SERVER_URL: ws://host.docker.internal:8443/connector
+      CONNECTOR_TOKEN: zone2-connector-token
+    restart: unless-stopped
+    networks:
+      zone2-network:
+        ipv4_address: 172.31.0.10
+
+  web:
+    image: phpcode-web:latest
+    container_name: zone2-web
+    environment:
+      DB_HOST: database
+      DB_NAME: DULIEU
+      DB_USER: root
+      DB_PASS: "123456"
+    depends_on:
+      - database
+    restart: unless-stopped
+    networks:
+      zone2-network:
+        ipv4_address: 172.31.0.20
+
+  database:
+    image: mysql/mysql-server:5.5
+    container_name: zone2-db
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: DULIEU
+      MYSQL_ROOT_HOST: "%"
+    volumes:
+      - zone2_db_data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      zone2-network:
+        ipv4_address: 172.31.0.30
+
+  ssh:
+    image: lscr.io/linuxserver/openssh-server:latest
+    container_name: zone2-ssh
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Asia/Ho_Chi_Minh
+      PASSWORD_ACCESS: "true"
+      USER_PASSWORD: "123456"
+      USER_NAME: admin
+    restart: unless-stopped
+    networks:
+      zone2-network:
+        ipv4_address: 172.31.0.40
+
+volumes:
+  zone2_db_data:
+
+networks:
+  zone2-network:
+    name: zone2-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+          gateway: 172.31.0.1

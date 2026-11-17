@@ -1,0 +1,69 @@
+
+services:
+  connector-app:
+    image: connector-service:1.0.0
+    container_name: home-lab-connector
+    environment:
+      CONNECTOR_SERVER_URL: ws://host.docker.internal:8443/connector
+      CONNECTOR_TOKEN: toilaconnector1
+    restart: unless-stopped
+    networks:
+      home-lab-network:
+        ipv4_address: 172.30.0.10
+
+  web:
+    image: phpcode-web:latest
+    container_name: home-lab-web
+    environment:
+      DB_HOST: 172.30.0.30
+      DB_NAME: DULIEU
+      DB_USER: root
+      DB_PASS: "123456"
+    command: sh -c "chmod -R 777 /var/www/html && apache2-foreground"
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      home-lab-network:
+        ipv4_address: 172.30.0.20
+
+  db:
+    image: mysql:8.0
+    container_name: home-lab-db
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: DULIEU
+      MYSQL_ROOT_HOST: "%"
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      home-lab-network:
+        ipv4_address: 172.30.0.30
+
+  ssh:
+    image: lscr.io/linuxserver/openssh-server:latest
+    container_name: home-lab-ssh
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Asia/Ho_Chi_Minh
+      PASSWORD_ACCESS: "true"
+      USER_PASSWORD: "123456"
+      USER_NAME: admin
+    restart: unless-stopped
+    networks:
+      home-lab-network:
+        ipv4_address: 172.30.0.40
+
+volumes:
+  db_data:
+
+networks:
+  home-lab-network:
+    name: home-lab-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          gateway: 172.30.0.1
