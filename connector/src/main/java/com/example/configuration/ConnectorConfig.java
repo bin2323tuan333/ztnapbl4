@@ -1,17 +1,14 @@
-package com.example.ws;
+package com.example.configuration;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Data
 public class ConnectorConfig {
-    private static ConnectorConfig instance = null;
+    private final String SERVER_URL = "ws://localhost:8443/connector";
+    private final String TOKEN = "toilaconnector1";
 
+
+    private static ConnectorConfig instance = null;
     public static ConnectorConfig getInstance() {
         if (instance == null) instance = new ConnectorConfig();
         return instance;
@@ -19,10 +16,6 @@ public class ConnectorConfig {
 
     private ConnectorConfig() {}
 
-
-    private final String SERVER_URL ="ws://localhost:8443/connector";
-
-    private final String TOKEN = "toilaconnector1";
 
 
     public String getSERVER_URL() {

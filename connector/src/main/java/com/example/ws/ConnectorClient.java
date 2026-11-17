@@ -1,5 +1,6 @@
 package com.example.ws;
 
+import com.example.configuration.ConnectorConfig;
 import com.example.protocol.frames.CloseFrame;
 import com.example.tcp.TcpClient;
 import io.netty.bootstrap.Bootstrap;
@@ -14,19 +15,12 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.timeout.IdleStateHandler;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.net.ssl.SSLException;
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 @Slf4j
 public class ConnectorClient {

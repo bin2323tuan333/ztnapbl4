@@ -1,5 +1,6 @@
 package com.example.ws;
 
+import com.example.configuration.ConnectorConfig;
 import com.example.protocol.frames.*;
 import com.example.routes.RoutingTable;
 import com.example.model.App;
@@ -7,7 +8,6 @@ import com.example.protocol.FrameType;
 import com.example.tcp.TcpClient;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.*;
