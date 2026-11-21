@@ -1,0 +1,68 @@
+
+services:
+  connector-app:
+    image: connector-1.0
+    container_name: saigon-connector
+    environment:
+      SERVER_URL: ws://host.docker.internal:8443/connector
+      CONNECTOR_TOKEN: saigon-connector-token
+    restart: unless-stopped
+    networks:
+      saigon-network:
+        ipv4_address: 172.32.0.10
+
+  web:
+    image: phpcode-web:latest
+    container_name: saigon-web
+    environment:
+      DB_HOST: database
+      DB_NAME: DULIEU
+      DB_USER: root
+      DB_PASS: "123456"
+    depends_on:
+      - database
+    restart: unless-stopped
+    networks:
+      saigon-network:
+        ipv4_address: 172.32.0.20
+
+  database:
+    image: mysql:8.0
+    container_name: saigon-db
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: DULIEU
+      MYSQL_ROOT_HOST: "%"
+    volumes:
+      - saigon_db_data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      saigon-network:
+        ipv4_address: 172.32.0.30
+
+  ssh:
+    image: lscr.io/linuxserver/openssh-server:latest
+    container_name: saigon-ssh
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Asia/Ho_Chi_Minh
+      PASSWORD_ACCESS: "true"
+      USER_PASSWORD: "123456"
+      USER_NAME: admin
+    restart: unless-stopped
+    networks:
+      saigon-network:
+        ipv4_address: 172.32.0.40
+
+volumes:
+  saigon_db_data:
+
+networks:
+  saigon-network:
+    name: saigon-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.32.0.0/24
+          gateway: 172.32.0.1
