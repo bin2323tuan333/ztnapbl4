@@ -1,4 +1,4 @@
-const BACKEND_URL = 'http://localhost:443';
+const BACKEND_URL = `http://${window.location.hostname}:443`;
 
 // Nhiều API gọi cùng lúc (vd Dashboard) đều có thể nhận 401 khi access token hết hạn.
 // Dùng chung 1 lần gọi /refresh cho tất cả, tránh refresh nhiều lần và ghi log lặp.
