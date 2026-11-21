@@ -2,7 +2,7 @@
 // UNION TYPES (thay cho enum — dễ serialize qua localStorage)
 // ============================================================
 
-export type SystemRoleCode = 'ADMIN' | 'SUPERVISOR' | 'TARGET_USER';
+export type SystemRoleCode = 'ADMIN' | 'USER';
 export type ConnectorStatus = 'online' | 'offline' | 'degraded';
 export type PermissionEffect = 'ALLOW' | 'DENY';
 export type PermissionSource = 'ROLE' | 'POSITION' | 'USER';

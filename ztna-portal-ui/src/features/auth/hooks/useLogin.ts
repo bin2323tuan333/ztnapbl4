@@ -33,9 +33,6 @@ export const useLogin = () => {
                 navigate("/dashboard");
             } else if (me?.role === 'USER') {
                 navigate("/portal");
-                // } else if (me?.role === 'SUPERVISOR') {
-                //     // Nếu bạn có trang riêng cho giám sát
-                //     navigate("/dashboard"); 
             } else {
                 navigate("/portal");
             }

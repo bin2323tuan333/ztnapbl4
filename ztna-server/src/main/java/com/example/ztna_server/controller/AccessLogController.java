@@ -26,7 +26,7 @@ public class AccessLogController {
      * GET /api/admin/access-logs
      */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<AccessLogResponse>> search(
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String resourceName,

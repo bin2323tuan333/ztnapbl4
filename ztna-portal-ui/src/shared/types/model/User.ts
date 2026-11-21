@@ -1,5 +1,5 @@
 // Khớp với UserResponse của backend (GET /admin/users)
-export type UserRole = 'ADMIN' | 'SUPERVISOR' | 'USER';
+export type UserRole = 'ADMIN' | 'USER';
 
 export interface User {
     id: string;

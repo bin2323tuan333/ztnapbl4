@@ -16,7 +16,7 @@ export function useLoginNavigation() {
         if (me?.role === 'ADMIN') {
             navigate("/dashboard");
         } else {
-            navigate("/portal"); // USER và SUPERVISOR
+            navigate("/portal"); // USER
         }
     };
 

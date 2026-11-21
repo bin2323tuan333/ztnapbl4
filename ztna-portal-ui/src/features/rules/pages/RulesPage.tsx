@@ -15,8 +15,12 @@ export const RulesPage = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     const handleDelete = async (id: string, name: string) => {
-        if (window.confirm(`Chắc chắn xóa Rule "${name}"?`)) {
+        if (!window.confirm(`Chắc chắn xóa Rule "${name}"?`)) return;
+        try {
             await deleteRule(id);
+        } catch (err: any) {
+            // Trước đây lỗi bị nuốt mất, bấm xóa không thấy gì xảy ra
+            alert(`Không xóa được rule: ${err.message || 'lỗi không xác định'}`);
         }
     };
 

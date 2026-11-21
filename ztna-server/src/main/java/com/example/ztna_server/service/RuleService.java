@@ -166,7 +166,13 @@ public class RuleService {
                 .orElseThrow(() -> new RuntimeException("Rule không tồn tại"));
 
         String ruleName = rule.getName();
-        ruleRepository.deleteById(id);
+
+        // Gỡ hết user và app khỏi rule trước (xóa các dòng trong rule_users, rule_resources),
+        // rồi mới xóa rule, để không bị lỗi khóa ngoại.
+        if (rule.getUsers() != null) rule.getUsers().clear();
+        if (rule.getResources() != null) rule.getResources().clear();
+        ruleRepository.saveAndFlush(rule);
+        ruleRepository.delete(rule);
 
         // Audit log
         auditService.log(

@@ -10,20 +10,18 @@ import '@/shared/styles/AdminPage.css';
 // Tiêu đề trang theo bộ lọc ?role= trên menu
 const ROLE_TITLES: Record<UserRole, string> = {
     ADMIN: 'Quản trị viên',
-    SUPERVISOR: 'Người giám sát',
     USER: 'Người dùng thường',
 };
-const ROLE_BADGE: Record<UserRole, string> = { ADMIN: 'red', SUPERVISOR: 'yellow', USER: 'blue' };
+const ROLE_BADGE: Record<UserRole, string> = { ADMIN: 'red', USER: 'blue' };
 
 const EMPTY_CREATE = { username: '', fullName: '', email: '', password: '', role: 'USER' as UserRole };
 
-const isRole = (v: string | null): v is UserRole => v === 'ADMIN' || v === 'SUPERVISOR' || v === 'USER';
+const isRole = (v: string | null): v is UserRole => v === 'ADMIN' || v === 'USER';
 const formatDate = (v: string | null) => (v ? new Date(v).toLocaleString('vi-VN') : '—');
 
 const RoleSelect = ({ value, onChange }: { value: UserRole; onChange: (r: UserRole) => void }) => (
     <select className="ap-input" value={value} onChange={(e) => onChange(e.target.value as UserRole)}>
         <option value="USER">USER — Người dùng thường</option>
-        <option value="SUPERVISOR">SUPERVISOR — Giám sát</option>
         <option value="ADMIN">ADMIN — Quản trị</option>
     </select>
 );

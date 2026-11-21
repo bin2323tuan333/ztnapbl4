@@ -83,10 +83,6 @@ public class DataInit implements CommandLineRunner {
                 .username("admin").fullName("Quản trị viên").password(passwordEncoder.encode("123"))
                 .email("admin@ztna.com").enabled(true).role(Role.ADMIN).createdAt(now).updatedAt(now).build();
 
-        User supervisorUser = User.builder()
-                .username("supervisor").fullName("Người Giám Sát").password(passwordEncoder.encode("super123"))
-                .email("supervisor@ztna.com").enabled(true).role(Role.SUPERVISOR).createdAt(now).updatedAt(now).build();
-
         User normalUser = User.builder()
                 .username("user").fullName("Người dùng A").password(passwordEncoder.encode("123"))
                 .email("user@ztna.com").enabled(true).createdAt(now).updatedAt(now).build();
@@ -103,6 +99,6 @@ public class DataInit implements CommandLineRunner {
                 .username("locked").fullName("Tài khoản bị khóa").password(passwordEncoder.encode("locked123"))
                 .email("locked@ztna.com").enabled(false).createdAt(now).updatedAt(now).build();
 
-        userRepository.saveAll(List.of(adminUser, supervisorUser, normalUser, alice, bob, lockedUser));
+        userRepository.saveAll(List.of(adminUser, normalUser, alice, bob, lockedUser));
     }
 }
