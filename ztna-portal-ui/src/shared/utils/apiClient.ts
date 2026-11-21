@@ -1,6 +1,29 @@
 const BACKEND_URL = 'http://localhost:443';
 
-const request = async (path: string, method: string, body?: any): Promise<any> => {
+// Nhiều API gọi cùng lúc (vd Dashboard) đều có thể nhận 401 khi access token hết hạn.
+// Dùng chung 1 lần gọi /refresh cho tất cả, tránh refresh nhiều lần và ghi log lặp.
+let refreshPromise: Promise<string> | null = null;
+
+const refreshAccessToken = (): Promise<string> => {
+    if (!refreshPromise) {
+        refreshPromise = fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
+            method: 'POST',
+            credentials: 'include',
+        })
+            .then(async (res) => {
+                if (!res.ok) throw new Error('Refresh token hết hạn');
+                const data = await res.json();
+                localStorage.setItem('accessToken', data.accessToken);
+                return data.accessToken as string;
+            })
+            .finally(() => {
+                refreshPromise = null;   // lần hết hạn sau sẽ refresh lại
+            });
+    }
+    return refreshPromise;
+};
+
+const request = async (path: string, method: string, body?: any, retried = false): Promise<any> => {
     const token = localStorage.getItem('accessToken');
 
     const headers: Record<string, string> = {
@@ -22,25 +45,16 @@ const request = async (path: string, method: string, body?: any): Promise<any> =
 
     const res = await fetch(`${BACKEND_URL}${path}`, options);
 
-    if (res.status === 401 && path !== '/api/v1/auth/login' && path !== '/api/v1/auth/refresh') {
+    // retried = true: đã refresh rồi mà vẫn 401 thì không refresh nữa (tránh lặp vô hạn)
+    if (res.status === 401 && !retried && path !== '/api/v1/auth/login' && path !== '/api/v1/auth/refresh') {
         try {
-            const refreshRes = await fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-
-            if (refreshRes.ok) {
-                const refreshData = await refreshRes.json();
-                localStorage.setItem('accessToken', refreshData.accessToken);
-                return request(path, method, body);
-            } else {
-                throw new Error('Refresh token hết hạn');
-            }
+            await refreshAccessToken();
         } catch (e) {
             localStorage.removeItem('accessToken');
             window.location.href = '/login';
             throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         }
+        return request(path, method, body, true);   // gọi lại 1 lần với access token mới
     }
 
     const text = await res.text();
