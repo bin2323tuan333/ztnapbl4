@@ -4,8 +4,8 @@ import lombok.Data;
 
 @Data
 public class ConnectorConfig {
-    private final String SERVER_URL = "ws://localhost:8443/connector";
-    private final String TOKEN = "toilaconnector1";
+    private final String SERVER_URL = System.getenv("SERVER_URL");
+    private final String TOKEN = System.getenv("CONNECTOR_TOKEN");
 
 
     private static ConnectorConfig instance = null;
