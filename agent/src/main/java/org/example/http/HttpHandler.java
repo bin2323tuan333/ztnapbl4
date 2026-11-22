@@ -1,7 +1,10 @@
+
 package org.example.http;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
 import io.netty.util.CharsetUtil;
 import org.example.Factory;
@@ -12,6 +15,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public class HttpHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
+
     private final TunnelClient tunnelClient = Factory.tunnelClient;
 
     @Override
@@ -19,13 +23,13 @@ public class HttpHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
         if (HttpMethod.OPTIONS.equals(req.method())) {
             FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NO_CONTENT);
             addCorsHeaders(response);
-            ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+            ctx.writeAndFlush(response)
+                    .addListener(ChannelFutureListener.CLOSE);
             return;
         }
 
         QueryStringDecoder queryDecoder = new QueryStringDecoder(req.uri());
         Map<String, List<String>> parameters = queryDecoder.parameters();
-
         String appId = getParam(parameters, "appId");
         String appType = getParam(parameters, "type");
 
@@ -33,7 +37,6 @@ public class HttpHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
             sendError(ctx, HttpResponseStatus.BAD_REQUEST, "Thiếu tham số appId");
             return;
         }
-
         String jwt = "";
         String authHeader = req.headers().get("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -41,16 +44,20 @@ public class HttpHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
         }
 
         String reqId = UUID.randomUUID().toString();
-        Factory.pendingHttpRequest.put(reqId, ctx.channel(), appType, appId);
-        if (Factory.tunnelCurrent == null || !Factory.tunnelCurrent.isActive()) {
-            tunnelClient.connect();
-        }
+        Factory.pendingHttpRequest.put(
+                reqId,
+                ctx.channel(),
+                appType,
+                appId
+        );
         tunnelClient.sendHttpAccess(reqId, appId, jwt);
     }
 
     private String getParam(Map<String, List<String>> parameters, String key) {
         List<String> values = parameters.get(key);
-        return (values != null && !values.isEmpty()) ? values.get(0) : null;
+        return values != null && !values.isEmpty()
+                ? values.get(0)
+                : null;
     }
 
     private void sendError(ChannelHandlerContext ctx, HttpResponseStatus status, String errorMsg) {
@@ -60,7 +67,10 @@ public class HttpHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
                 status,
                 Unpooled.copiedBuffer(jsonBody, CharsetUtil.UTF_8)
         );
-        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json; charset=UTF-8");
+        response.headers().set(
+                HttpHeaderNames.CONTENT_TYPE,
+                "application/json; charset=UTF-8"
+        );
         addCorsHeaders(response);
         ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }

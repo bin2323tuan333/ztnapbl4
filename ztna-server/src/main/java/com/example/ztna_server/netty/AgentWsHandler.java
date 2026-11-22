@@ -111,80 +111,22 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
             return;
         }
 
-        // Ung dung dang off hoac khong ton tai
-        RouteTarget target = routingRegistry.getByResourceId(resourceId);
-        if (target == null) {
-            log.warn("[Lifecycle] Resource not found: reqId={}, resourceId={}, ip={}", reqId, resourceId, ip);
-            sendHttpFail(
-                    ctx,
-                    reqId,
-                    HttpResFrame.STATUS_APP_NOT_FOUND,
-                    "Resource not found"
-            );
-            return;
-        }
-
-
-        Resource resource = resourceRepository.findById(UUID.fromString(target.resourceId()))
-                .orElse(null);
-        Connector connector = connectorRepository.findById(UUID.fromString(target.connectorId()))
-                .orElse(null);
-
-        if (resource == null || connector == null) {
-            log.error("[Lifecycle] Routing references missing DB entity: resource={}, connector={}",
-                    resource.getId(), connector.getId());
-
-            sendHttpFail(
-                    ctx,
-                    reqId,
-                    HttpResFrame.STATUS_INTERNAL_ERROR,
-                    "Resource or Connector not found"
-            );
-            return;
-        }
-
-        if (!connectorConnectionRegistry.isOnline(target.connectorId())) {
-            log.warn("[Lifecycle] Connector offline: reqId={}, connector={}, resource={}",
-                    reqId, target.connectorId(), resourceId);
-
-            accessLogService.log(
-                    null,
-                    ip,
-                    "Unknown",
-                    resource.getId(),
-                    resource.getName(),
-                    resource.getHost(),
-                    connector.getId(),
-                    connector.getName(),
-                    Decision.DENY,
-                    "Connector offline"
-            );
-
-            sendHttpFail(
-                    ctx,
-                    reqId,
-                    HttpResFrame.STATUS_CONNECTOR_OFFLINE,
-                    "Connector offline"
-            );
-            return;
-        }
 
         String uid;
         try {
             if (jwtService.isTokenExpired(jwt)) {
                 UUID Uid = jwtService.extractUserId(jwt);
                 User user = userRepository.findById(Uid).orElse(null);
-                log.warn("[Lifecycle] HTTP_ACCESS bị từ chối: JWT hết hạn, reqId={}, uid={}, appId={}, ip={}",
-                        reqId, Uid, resourceId, ip);
+                log.warn("[Lifecycle] HTTP_ACCESS bị từ chối: JWT hết hạn, reqId={}, uid={}, appId={}, ip={}", reqId, Uid, resourceId, ip);
                 accessLogService.log(
                         Uid,
                         ip,
                         user == null ? "Unknown" : user.getFullName(),
-                        resource.getId(),
-                        resource.getName(),
-                        resource.getHost(),
-                        connector.getId(),
-                        connector.getName(),
+                        null,
+                        resourceId,
+                        null,
+                        null,
+                        null,
                         Decision.DENY,
                         "JWT hết hạn"
                 );
@@ -192,7 +134,7 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
                         ctx,
                         reqId,
                         HttpResFrame.STATUS_AUTH_FAILED,
-                        "JWT hết hạn"
+                        "Phiên đăng nhập đã hết, hãy đăng nhập lại."
                 );
                 return;
             }
@@ -204,11 +146,11 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
                     null,
                     ip,
                     "Unknown",
-                    resource.getId(),
-                    resource.getName(),
-                    resource.getHost(),
-                    connector.getId(),
-                    connector.getName(),
+                    null,
+                    resourceId,
+                    null,
+                    null,
+                    null,
                     Decision.DENY,
                     "JWT không hợp lệ"
             );
@@ -216,7 +158,7 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
                     ctx,
                     reqId,
                     HttpResFrame.STATUS_AUTH_FAILED,
-                    "JWT không hợp lệ"
+                    "Phiên đăng nhập đã hết, hãy đăng nhập lại."
             );
             return;
         }
@@ -230,11 +172,11 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
                     userId,
                     ip,
                     authed == null ? "Unknown" : authed.getFullName(),
-                    resource.getId(),
-                    resource.getName(),
-                    resource.getHost(),
-                    connector.getId(),
-                    connector.getName(),
+                    null,
+                    resourceId,
+                    null,
+                    null,
+                    null,
                     Decision.DENY,
                     "User không tồn tại hoặc đã bị khóa"
             );
@@ -242,11 +184,96 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
                     ctx,
                     reqId,
                     HttpResFrame.STATUS_AUTH_FAILED,
-                    "User not found or disabled"
+                    "User không tồn tại hoặc đã bị khóa"
             );
 
             return;
         }
+
+        // Ung dung dang off hoac khong ton tai
+        RouteTarget target = routingRegistry.getByResourceId(resourceId);
+        if (target == null) {
+            log.warn("[Lifecycle] Resource not found: reqId={}, resourceId={}, ip={}", reqId, resourceId, ip);
+            accessLogService.log(
+                    userId,
+                    ip,
+                    authed.getFullName(),
+                    null,
+                    resourceId,
+                    null,
+                    null,
+                    null,
+                    Decision.DENY,
+                    "Resource không tồn tại hoặc không được phép truy cập"
+            );
+            sendHttpFail(
+                    ctx,
+                    reqId,
+                    HttpResFrame.STATUS_APP_NOT_FOUND,
+                    "Ứng dụng đang tạm dừng hoạt động."
+            );
+            return;
+        }
+
+
+        Resource resource = resourceRepository.findById(UUID.fromString(target.resourceId()))
+                .orElse(null);
+        Connector connector = connectorRepository.findById(UUID.fromString(target.connectorId()))
+                .orElse(null);
+
+        if (resource == null || connector == null) {
+            log.error("[Lifecycle] Routing references missing DB entity: resource={}, connector={}",
+                    resource.getId(), connector.getId());
+            accessLogService.log(
+                    userId,
+                    ip,
+                    authed.getFullName(),
+                    resource != null ? resource.getId() : null,
+                    resource != null ? resource.getName() : resourceId,
+                    resource != null ? resource.getHost() : null,
+                    connector != null ? connector.getId() : null,
+                    connector != null ? connector.getName() : "Unknown",
+                    Decision.DENY,
+                    resource == null
+                            ? "Resource không tồn tại trong database"
+                            : "Connector không tồn tại trong database"
+            );
+            sendHttpFail(
+                    ctx,
+                    reqId,
+                    HttpResFrame.STATUS_INTERNAL_ERROR,
+                    "Ứng dụng hoặc vùng kết nối không khả dụng"
+            );
+            return;
+        }
+
+        if (!connectorConnectionRegistry.isOnline(target.connectorId())) {
+            log.warn("[Lifecycle] Connector offline: reqId={}, connector={}, resource={}",
+                    reqId, target.connectorId(), resourceId);
+
+            accessLogService.log(
+                    userId,
+                    ip,
+                    authed.getFullName(),
+                    resource.getId(),
+                    resource.getName(),
+                    resource.getHost(),
+                    connector.getId(),
+                    connector.getName(),
+                    Decision.DENY,
+                    "Connector đang không hoạt động."
+            );
+
+            sendHttpFail(
+                    ctx,
+                    reqId,
+                    HttpResFrame.STATUS_CONNECTOR_OFFLINE,
+                    "Connector không hoạt động."
+            );
+            return;
+        }
+
+
 
 
         AgentConnection currentForUId = agentConnectionRegistry.getByUserId(uid);
@@ -281,7 +308,6 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
         );
 
         HttpResFrame response = HttpResFrame.ok(reqId, "");
-
         ctx.writeAndFlush(
                 new BinaryWebSocketFrame(
                         Unpooled.wrappedBuffer(response.encode())

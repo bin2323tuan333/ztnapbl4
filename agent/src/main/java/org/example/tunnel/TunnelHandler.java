@@ -1,3 +1,4 @@
+
 package org.example.tunnel;
 
 import io.netty.buffer.ByteBuf;
@@ -12,6 +13,7 @@ import io.netty.util.CharsetUtil;
 import org.example.Factory;
 import org.example.cache.ClientOpenRegistry;
 import org.example.cache.PendingHttpRequest;
+import org.example.cache.StreamRegistry;
 import org.example.launcher.MysqlLauncher;
 import org.example.launcher.SshLauncher;
 import org.example.launcher.WebLauncher;
@@ -19,33 +21,37 @@ import org.example.listener.LocalHandler;
 import org.example.listener.LocalServer;
 import org.example.protocol.FrameType;
 import org.example.protocol.frames.*;
-import org.example.cache.StreamRegistry;
 
 public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     private final StreamRegistry streamRegistry = Factory.streamRegistry;
     private final PendingHttpRequest pendingHttpRequest = Factory.pendingHttpRequest;
     private final ClientOpenRegistry clientOpenRegistry = Factory.clientOpenRegistry;
 
-
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, WebSocketFrame frame) {
         if (frame instanceof PingWebSocketFrame ping) {
-            ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()));
+            ctx.writeAndFlush(
+                    new PongWebSocketFrame(ping.content().retain())
+            );
             return;
         }
-        if (!(frame instanceof BinaryWebSocketFrame bin)) return;
+
+        if (!(frame instanceof BinaryWebSocketFrame bin)) {
+            return;
+        }
 
         ByteBuf buf = bin.content();
-        if (!buf.isReadable()) return;
+        if (!buf.isReadable()) {
+            return;
+        }
 
         byte type = buf.getByte(buf.readerIndex());
-
         try {
             switch (type) {
                 case FrameType.RESOURCE_RESPONSE -> handleResourceRes(buf);
                 case FrameType.HTTP_RESPONSE -> handleHttpRes(buf);
-                case FrameType.DATA          -> handleData(buf);
-                case FrameType.CLOSE         -> handleClose(buf);
+                case FrameType.DATA -> handleData(buf);
+                case FrameType.CLOSE -> handleClose(buf);
                 default -> System.err.println("[Tunnel] Frame type lạ: 0x" + String.format("%02X", type));
             }
         } catch (Exception e) {
@@ -53,31 +59,39 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         }
     }
 
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt == WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
+            Factory.tunnelClient.onHandshakeComplete(ctx.channel());
+            return;
+        }
+        super.userEventTriggered(ctx, evt);
+    }
 
     private void handleResourceRes(ByteBuf buf) {
         ResourceResFrame resFrame = new ResourceResFrame();
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
         resFrame.decode(data);
-
         String reqId = resFrame.getRequestId();
         Channel localChannel = clientOpenRegistry.get(reqId);
 
         if (localChannel == null || !localChannel.isActive()) {
-            System.err.println("[Tunnel] ❌ Không tìm thấy Channel của Chrome cho reqId=" + reqId);
+            System.err.println("[Tunnel] Không tìm thấy Channel của client cho reqId=" + reqId);
+            clientOpenRegistry.remove(reqId);
             return;
         }
 
         if (resFrame.isOk()) {
             LocalHandler localHandler = localChannel.pipeline().get(LocalHandler.class);
-
             if (localHandler != null) {
                 localHandler.onAccessSuccess(resFrame.getStreamId());
             } else {
-                System.err.println("[Tunnel] ❌ Không tìm thấy LocalHandler trong pipeline!");
+                System.err.println("[Tunnel] Không tìm thấy LocalHandler trong pipeline!");
             }
         } else {
-            System.err.println("[Tunnel] ❌ Gateway từ chối cấp stream: " + resFrame.getReason());
+            System.err.println("[Tunnel] Gateway từ chối cấp stream: " + resFrame.getReason());
+            clientOpenRegistry.remove(reqId);
             localChannel.close();
         }
     }
@@ -87,12 +101,13 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
         resFrame.decode(data);
-
-        Channel channelHttp = pendingHttpRequest.getChannel(resFrame.getRequestId());
-        String resourceId = pendingHttpRequest.getResource(resFrame.getRequestId());
+        String reqId = resFrame.getRequestId();
+        Channel channelHttp = pendingHttpRequest.getChannel(reqId);
+        String resourceId = pendingHttpRequest.getResource(reqId);
         System.out.println("[Tunnel] DEBUG - resourceId lấy từ Cache: " + resourceId);
 
         if (channelHttp == null || !channelHttp.isActive()) {
+            pendingHttpRequest.remove(reqId);
             return;
         }
 
@@ -103,7 +118,8 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
             LocalServer server = new LocalServer(resourceId);
             int port = server.start();
 
-            String type = pendingHttpRequest.getTypes(resFrame.getRequestId());
+            String type = pendingHttpRequest.getTypes(reqId);
+
             try {
                 if (type != null) {
                     switch (type) {
@@ -113,29 +129,28 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Lỗi mở app: " + e.getMessage());
+                System.out.println(
+                        "Lỗi mở app: " + e.getMessage()
+                );
             }
-
-
-
             status = HttpResponseStatus.OK;
             jsonBody = "{\"status\":\"success\",\"port\":" + port + "}";
-
         } else {
-            status = (resFrame.getStatus() == HttpResFrame.STATUS_AUTH_FAILED)
+            status = resFrame.getStatus() == HttpResFrame.STATUS_AUTH_FAILED
                     ? HttpResponseStatus.UNAUTHORIZED
                     : HttpResponseStatus.INTERNAL_SERVER_ERROR;
             jsonBody = "{\"error\":\"" + resFrame.getReason() + "\"}";
         }
-
         FullHttpResponse response = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, status, Unpooled.copiedBuffer(jsonBody, CharsetUtil.UTF_8));
-
+                HttpVersion.HTTP_1_1,
+                status,
+                Unpooled.copiedBuffer(jsonBody, CharsetUtil.UTF_8)
+        );
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json; charset=UTF-8");
         response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
         response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, "Authorization, Content-Type");
-
         channelHttp.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+        pendingHttpRequest.remove(reqId);
     }
 
     private void handleData(ByteBuf buf) {
@@ -143,11 +158,12 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
         dataFrame.decode(data);
-
         Channel channel = streamRegistry.get(dataFrame.getStreamId());
         if (channel != null && channel.isActive()) {
             System.out.println("[Tunnel] [Server -> Agent] " + dataFrame.getData().length + " bytes");
-            channel.writeAndFlush(Unpooled.copiedBuffer(dataFrame.getData()));
+            channel.writeAndFlush(Unpooled.copiedBuffer(
+                    dataFrame.getData()
+            ));
         } else {
             System.err.println("[Tunnel] Không tìm thấy Channel cho streamId=" + dataFrame.getStreamId());
         }
@@ -159,16 +175,21 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         buf.readBytes(data);
         closeFrame.decode(data);
         Channel channel = streamRegistry.remove(closeFrame.getStreamId());
-        if (channel != null) channel.close();
+        if (channel != null) {
+            channel.close();
+        }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        System.err.println("[TunnelHandler] Lỗi: " + cause.getMessage());
         ctx.close();
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        System.out.println("Mat ket noi voi server");
+        System.out.println("[TunnelHandler] Mất kết nối với Server.");
+        Factory.tunnelClient.onDisconnected(ctx.channel());
+        super.channelInactive(ctx);
     }
 }
