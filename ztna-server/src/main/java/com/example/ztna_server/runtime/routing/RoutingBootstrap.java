@@ -45,7 +45,7 @@ public class RoutingBootstrap {
 
     @Transactional(readOnly = true)
     public void refresh() {
-        List<Resource> resources = resourceRepository.findAllEnabled();
+        List<Resource> resources = resourceRepository.findAllByEnabledTrueAndConnectorEnabledTrue();
 
         Map<String, RouteTarget> targets = new HashMap<>(resources.size() * 2);
         for (Resource res : resources) {

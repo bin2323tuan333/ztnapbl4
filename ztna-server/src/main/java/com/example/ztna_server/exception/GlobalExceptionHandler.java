@@ -43,7 +43,6 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(ec.getCode(), msg));
     }
 
-    // JSON sai cú pháp, role không tồn tại ("role":"BOSS"), id không phải UUID → 400 thay vì 500
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception e) {
         ErrorCode ec = ErrorCode.BAD_REQUEST;

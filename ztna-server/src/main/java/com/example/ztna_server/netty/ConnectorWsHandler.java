@@ -268,10 +268,9 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
             log.info("[Connector] Disconnected: connectorId={}, connectionId={}", connectorId, connectionId);
             ConnectorConnection removed = connectorConnectionRegistry.getByConnectorId(connectorId);
             if (removed != null) {
-                sessionLifecycleService.onConnectorDisconnect(connectionId);
+                sessionLifecycleService.onConnectorDisconnect(connectorId);
             }
         }
-
     }
 
     @Override

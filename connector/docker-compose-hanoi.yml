@@ -1,0 +1,67 @@
+services:
+  connector-app:
+    image: connector-1.0
+    container_name: hanoi-connector
+    environment:
+      SERVER_URL: ws://host.docker.internal:8443/connector
+      CONNECTOR_TOKEN: hanoi-connector-token
+    restart: unless-stopped
+    networks:
+      hanoi-network:
+        ipv4_address: 172.31.0.10
+
+  web:
+    image: phpcode-web:latest
+    container_name: hanoi-web
+    environment:
+      DB_HOST: database
+      DB_NAME: DULIEU
+      DB_USER: root
+      DB_PASS: "123456"
+    depends_on:
+      - database
+    restart: unless-stopped
+    networks:
+      hanoi-network:
+        ipv4_address: 172.31.0.20
+
+  database:
+    image: mysql/mysql-server:5.5
+    container_name: hanoi-db
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: DULIEU
+      MYSQL_ROOT_HOST: "%"
+    volumes:
+      - hanoi_db_data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      hanoi-network:
+        ipv4_address: 172.31.0.30
+
+  ssh:
+    image: lscr.io/linuxserver/openssh-server:latest
+    container_name: hanoi-ssh
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Asia/Ho_Chi_Minh
+      PASSWORD_ACCESS: "true"
+      USER_PASSWORD: "123456"
+      USER_NAME: admin
+    restart: unless-stopped
+    networks:
+      hanoi-network:
+        ipv4_address: 172.31.0.40
+
+volumes:
+  hanoi_db_data:
+
+networks:
+  hanoi-network:
+    name: hanoi-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+          gateway: 172.31.0.1
