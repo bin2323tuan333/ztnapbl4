@@ -1,6 +1,6 @@
 // src/features/dashboard/component/CalendarWidget.tsx
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, isSameMonth, isToday, isSameDay } from 'date-fns';
+import { format, isSameMonth, isSameDay } from 'date-fns';
 
 interface Props {
     currentDate: Date;

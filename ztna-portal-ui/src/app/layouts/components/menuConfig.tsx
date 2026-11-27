@@ -5,7 +5,6 @@ import {
     Package,
     KeyRound,
     ScrollText,
-    Settings,
 } from 'lucide-react';
 
 export type MenuItem = {
