@@ -301,7 +301,9 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
     private void sendResourceFail(Channel agentChannel, String requestId, String reason) {
         if (agentChannel == null || !agentChannel.isActive()) return;
         try {
-            ResourceAccessFrame frame = new ResourceAccessFrame(requestId, reason);
+            // Phải là RESOURCE_RESPONSE (0x06): Agent đang chờ đúng loại frame này để biết yêu cầu bị từ chối.
+            // Trước đây gửi nhầm RESOURCE_ACCESS (0x05) nên Agent bỏ qua và người dùng bị treo.
+            ResourceResFrame frame = ResourceResFrame.failed(requestId, ResourceResFrame.STATUS_ERROR, reason);
             agentChannel.writeAndFlush(new BinaryWebSocketFrame(
                     Unpooled.wrappedBuffer(frame.encode())
             )).addListener(f -> {

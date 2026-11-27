@@ -92,7 +92,15 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         } else {
             System.err.println("[Tunnel] Gateway từ chối cấp stream: " + resFrame.getReason());
             clientOpenRegistry.remove(reqId);
-            localChannel.close();
+            // Báo lý do cho người dùng (trang lỗi nếu là trình duyệt) rồi mới đóng
+            LocalHandler localHandler = localChannel.pipeline().get(LocalHandler.class);
+            if (localHandler != null) {
+                // Chạy trên event loop của kênh local (nơi LocalHandler đệm dữ liệu) để tránh tranh chấp luồng
+                String reason = resFrame.getReason();
+                localChannel.eventLoop().execute(() -> localHandler.onAccessDenied(reason));
+            } else {
+                localChannel.close();
+            }
         }
     }
 
