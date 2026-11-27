@@ -29,6 +29,13 @@ public enum ErrorCode {
     INVALID_EXPIRY(HttpStatus.BAD_REQUEST, "PERM_003", "Expiry time must be in the future"),
     APP_EXISTED(HttpStatus.CONFLICT, "APP_001", "Application name already exists"),
     APP_IN_USE(HttpStatus.CONFLICT, "APP_002", "Application still has permissions or logs, disable it instead of deleting"),
+    RULE_EXISTED(HttpStatus.CONFLICT, "RULE_101", "Tên Rule đã tồn tại"),
+    RULE_NOT_FOUND(HttpStatus.NOT_FOUND, "RULE_102", "Rule không tồn tại"),
+    RULE_INVALID_EXPIRY(HttpStatus.BAD_REQUEST, "RULE_103", "Thời điểm hết hạn phải ở trong tương lai"),
+    CONNECTOR_EXISTED(HttpStatus.CONFLICT, "CON_001", "Tên Connector đã tồn tại, vui lòng chọn tên khác"),
+    CONNECTOR_NOT_FOUND(HttpStatus.NOT_FOUND, "CON_002", "Connector không tồn tại"),
+    API_NOT_FOUND(HttpStatus.NOT_FOUND, "SYS_002", "Đường dẫn API không tồn tại"),
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "SYS_003", "Phương thức HTTP không được hỗ trợ cho đường dẫn này"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS_001", "Something went wrong");
 
     private final HttpStatus status;

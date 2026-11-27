@@ -12,6 +12,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -46,6 +48,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception e) {
         ErrorCode ec = ErrorCode.BAD_REQUEST;
+        return ResponseEntity.status(ec.getStatus())
+                .body(new ErrorResponse(ec.getCode(), ec.getMessage()));
+    }
+
+    // URL không tồn tại: trả 404 thay vì rơi xuống handler chung (500)
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(NoResourceFoundException e) {
+        ErrorCode ec = ErrorCode.API_NOT_FOUND;
+        return ResponseEntity.status(ec.getStatus())
+                .body(new ErrorResponse(ec.getCode(), ec.getMessage()));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException e) {
+        ErrorCode ec = ErrorCode.METHOD_NOT_ALLOWED;
         return ResponseEntity.status(ec.getStatus())
                 .body(new ErrorResponse(ec.getCode(), ec.getMessage()));
     }
