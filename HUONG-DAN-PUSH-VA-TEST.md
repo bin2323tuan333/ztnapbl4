@@ -1,7 +1,7 @@
 # Hướng dẫn: push lên GitHub và kiểm thử các lỗi đã sửa
 
 Tài liệu gồm 2 phần:
-- **Phần A**: đưa 14 patch trong `C:\Users\Legion\Downloads\ztna-patches` vào repo thật, tạo nhánh riêng, push lên GitHub, mở Pull Request.
+- **Phần A**: đưa các patch trong `C:\Users\Legion\Downloads\ztna-patches` vào repo thật (nhánh `fix/ztna-security`), push lên GitHub, mở Pull Request.
 - **Phần B**: chạy toàn bộ hệ thống trên 1 máy (XAMPP + Eclipse/terminal + VS Code), kiểm lần lượt từng lỗi đã sửa.
 
 Mọi lệnh dưới đây gõ trong **PowerShell** (Windows Terminal hoặc terminal của VS Code), trừ khi ghi khác.
@@ -46,43 +46,63 @@ Lần đầu clone repo private, Windows mở cửa sổ đăng nhập GitHub: �
 
 ### A3. Vào repo thật và kiểm tra sạch sẽ
 
+**Làm trong thư mục clone từ GitHub** (máy nhóm hiện dùng `C:\Users\Legion\Documents\ztnapbl4-real`), **không** làm trong `Downloads\ztnapbl4-main`: repo trong Downloads đã có sẵn mọi sửa lỗi, áp patch vào đó sẽ báo xung đột.
 ```powershell
-cd <đường-dẫn-repo-thật>
+cd $HOME\Documents\ztnapbl4-real
 ```
 ```powershell
 git status
 ```
-Mong đợi: `nothing to commit, working tree clean`.
+Mong đợi: `nothing to commit, working tree clean`. File `connector/dependency-reduced-pom.xml` hiện `modified` sau khi build là file Maven tự sinh: trả lại bằng `git restore connector/dependency-reduced-pom.xml`, không commit.
 Nếu còn file đang sửa dở: commit chúng, hoặc cất tạm bằng `git stash` (lấy lại bằng `git stash pop`).
 
-### A4. Cập nhật nhánh chính
+### A4. Chọn nhánh để áp patch
 
-Xem tên nhánh chính (thường là `main`, có repo dùng `master`):
+Xem các nhánh trên GitHub:
+```powershell
+git fetch
+```
 ```powershell
 git branch -a
 ```
-Chuyển sang nhánh chính và kéo bản mới nhất:
+
+- **Đã có nhánh `remotes/origin/fix/ztna-security`** (tình trạng hiện tại): nhánh này đã chứa các patch đã áp trước đó (tới 27/11: `0001`–`0015`). Chuyển sang nhánh đó:
+  ```powershell
+  git checkout fix/ztna-security
+  ```
+  ```powershell
+  git pull
+  ```
+  Xem patch cuối cùng đã có trên nhánh (dòng trên cùng) để biết cần áp tiếp từ số nào:
+  ```powershell
+  git log --oneline -3
+  ```
+- **Chưa có nhánh nào** (repo mới, chưa áp patch lần nào): tạo nhánh mới từ `main`:
+  ```powershell
+  git checkout main
+  ```
+  ```powershell
+  git pull
+  ```
+  ```powershell
+  git checkout -b fix/ztna-security
+  ```
+
+### A5. Không áp lại patch đã có
+
+Mỗi patch chỉ áp **một lần**. Áp lại patch đã có trên nhánh sẽ báo `CONFLICT` hoặc `patch does not apply`. So tiêu đề commit trên nhánh (`git log --oneline`) với tên file trong `ztna-patches` để biết patch nào là mới.
+
+### A6. Áp các patch mới theo đúng thứ tự
+
+PowerShell không tự mở rộng `*.patch` khi gọi git, nên phải liệt kê file và sắp theo tên. Thay `0016` bằng số của patch mới đầu tiên chưa có trên nhánh:
 ```powershell
-git checkout main
+git am --3way (Get-ChildItem C:\Users\Legion\Downloads\ztna-patches\*.patch | Where-Object { $_.Name -ge '0016' } | Sort-Object Name).FullName
 ```
-```powershell
-git pull
-```
-
-### A5. Tạo nhánh mới cho đợt sửa lỗi
-
-```powershell
-git checkout -b fix/ztna-review
-```
-Mong đợi: `Switched to a new branch 'fix/ztna-review'`.
-
-### A6. Áp 14 patch theo đúng thứ tự
-
-PowerShell không tự mở rộng `*.patch` khi gọi git, nên phải liệt kê file và sắp theo tên như sau:
+Nhánh mới tạo từ `main` (chưa có patch nào) thì áp tất cả:
 ```powershell
 git am --3way (Get-ChildItem C:\Users\Legion\Downloads\ztna-patches\*.patch | Sort-Object Name).FullName
 ```
-Mong đợi: 14 dòng `Applying: ...`, bắt đầu bằng `Applying: T17: ...` và kết thúc bằng `Applying: Thêm hướng dẫn push, kiểm thử và script kiểm`. Không có dòng `error`.
+Mong đợi: mỗi patch một dòng `Applying: ...`, không có dòng `error`.
 
 **Nếu git báo xung đột** (`Patch failed at 00xx ...` hoặc `CONFLICT`), lý do thường là nhóm đã sửa cùng file đó trên GitHub sau bản `706525e`:
 1. Xem file nào bị xung đột:
@@ -107,9 +127,9 @@ Xung đột dễ gặp nhất là patch `0013` (sửa `application.yaml`), nếu
 
 ### A7. Kiểm tra trước khi push
 
-1. Xem 14 commit mới nằm trên nhánh:
+1. Xem các commit vừa áp nằm trên cùng nhánh:
    ```powershell
-   git log --oneline -15
+   git log --oneline -20
    ```
 2. Build Java (máy không có `mvn` thì dùng wrapper có sẵn):
    ```powershell
@@ -139,18 +159,19 @@ Xung đột dễ gặp nhất là patch `0013` (sửa `application.yaml`), nếu
 ### A8. Push nhánh lên GitHub
 
 ```powershell
-git push -u origin fix/ztna-review
+git push -u origin fix/ztna-security
 ```
 - Lần đầu push, Windows có thể mở cửa sổ đăng nhập GitHub (Git Credential Manager). Chọn đăng nhập bằng trình duyệt.
 - Nếu terminal hỏi `Username` / `Password`: GitHub **không nhận mật khẩu tài khoản**. Ô Password phải là Personal Access Token (GitHub → Settings → Developer settings → Personal access tokens → Generate new token, cấp quyền `repo`).
-- Mong đợi cuối cùng: `branch 'fix/ztna-review' set up to track 'origin/fix/ztna-review'`.
+- Mong đợi cuối cùng: `branch 'fix/ztna-security' set up to track 'origin/fix/ztna-security'`.
 
-`-u` chỉ cần ở lần push đầu. Lần sau sửa thêm thì `git add`, `git commit`, rồi chỉ cần `git push`.
+`-u` chỉ cần khi nhánh vừa tạo ở máy và chưa có trên GitHub. Nhánh lấy về bằng `git checkout fix/ztna-security` (đã có trên GitHub) thì chỉ cần `git push`.
+`git push` chỉ cập nhật nhánh `fix/ztna-security` trên GitHub; nhánh `main` chỉ thay đổi khi có người bấm **Merge** ở Pull Request.
 
 ### A9. Mở Pull Request trên GitHub
 
-1. Vào trang repo trên GitHub. Sẽ có thanh vàng **Compare & pull request** của nhánh `fix/ztna-review`; bấm vào.
-   (Không thấy thì vào tab **Pull requests** → **New pull request**, chọn `base: main` ← `compare: fix/ztna-review`.)
+1. Vào trang repo trên GitHub. Sẽ có thanh vàng **Compare & pull request** của nhánh `fix/ztna-security`; bấm vào.
+   (Không thấy thì vào tab **Pull requests** → **New pull request**, chọn `base: main` ← `compare: fix/ztna-security`.)
 2. Tiêu đề gợi ý: `Sửa lỗi phân quyền, phiên và cấu hình demo LAN (đợt review 27/11)`.
 3. Mô tả: liệt kê các mã lỗi đã sửa (T17, N1, N2, T1, T11, T18, T4, T12, N4, N5, N6, T3, T2, T5, T14, N7, T13), và ghi chú **Agent và Server phải chạy cùng bản mới** vì giao thức frame đã đổi.
 4. Bấm **Create pull request**. Chờ nhóm xem rồi mới bấm **Merge**.
@@ -161,7 +182,7 @@ git push -u origin fix/ztna-review
 git fetch
 ```
 ```powershell
-git checkout fix/ztna-review
+git checkout fix/ztna-security
 ```
 Trong Eclipse: chuột phải từng project → **Maven** → **Update Project** (vì `agent/pom.xml` đã đổi). Trong VS Code: chạy lại `npm ci` trong `ztna-portal-ui`.
 
@@ -346,6 +367,7 @@ Mong đợi: thông báo **"Connector đang có ứng dụng, hãy xoá hoặc c
    - giu-phien in `KẾT NỐI ĐÃ BỊ ĐÓNG`.
    - Cửa sổ 3 (connector) in `Disconnected`, sau đó cứ vài giây thử nối lại và bị ngắt tiếp.
    - Log Server có `Invalid or disabled connector`.
+   - Cửa sổ user bấm F5: Portal không còn ứng dụng của connector này (T19). Bấm mở ứng dụng từ trước cũng bị từ chối.
 4. **Bật** lại connector → sau vài giây connector nối lại (log Server: `Registered`, `Routing table sent`), mở ứng dụng lại được.
 
 Bản cũ: tắt connector rồi mà connector vẫn kết nối và phiên vẫn chạy.
