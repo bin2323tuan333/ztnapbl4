@@ -1,42 +1,15 @@
-#spring:
-#  application:
-#    name: ztna-server
-#
-#  datasource:
-#    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?allowPublicKeyRetrieval=true&useSSL
-#    username: ${DB_USER}
-#    password: ${DB_PASSWORD}
-#    driver-class-name: com.mysql.cj.jdbc.Driver
-#
-#
-#ztna:
-#  netty:
-#    port: ${NETTY_PORT:8443}
-#    boss-threads: ${NETTY_BOSS_THREADS:1}
-#    worker-threads: ${NETTY_WORKER_THREADS:8}
-#  jwt:
-#    secret: ${JWT_SECRET}
-#    ttl-minutes: ${JWT_TTL_MINUTES:60}
-#  connector:
-#    token: ${CONNECTOR_TOKEN}
-#server:
-#  port: 443
-#  ssl:
-#    enabled: true
-#    key-store: classpath:keystore.p12
-#    key-store-password: changeit
-#    key-store-type: PKCS12
-
+# Cấu hình qua biến môi trường (có giá trị mặc định cho máy dev). Danh sách biến: xem .env.example ở thư mục gốc.
 server:
-  port: 443
+  port: ${SERVER_PORT:443}
 spring:
   application:
     name: ztna-server
 
   datasource:
-    url: jdbc:mysql://localhost:3306/ztna_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
-    username: root
-    password: 123456
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:ztna_db}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
+    username: ${DB_USERNAME:root}
+    # XAMPP mặc định root không mật khẩu: đặt biến môi trường DB_PASSWORD rỗng. Docker: xem .env.example
+    password: ${DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -68,6 +41,8 @@ logging:
 
 app:
   jwt:
-    secret: "your-very-long-secret-key-at-least-32-characters-long-abcxyz"
+    # Không để secret trong code. Không đặt JWT_SECRET thì server tự sinh secret ngẫu nhiên mỗi lần khởi động
+    # (người dùng phải đăng nhập lại sau khi restart server). Demo nhiều máy: đặt JWT_SECRET >= 32 ký tự.
+    secret: ${JWT_SECRET:}
     refresh-expiration-ms: 604800000
     access-expiration-ms: 900000
