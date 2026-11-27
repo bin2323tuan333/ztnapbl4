@@ -50,6 +50,7 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
           AND (rule.expiresAt IS NULL OR rule.expiresAt > :now)
     )
     AND r.enabled = true
+    AND r.connector.enabled = true
     ORDER BY r.name ASC
     """)
     List<ResourceAccess> findAllByUserId(@Param("userId") UUID userId, @Param("now") Instant now);
