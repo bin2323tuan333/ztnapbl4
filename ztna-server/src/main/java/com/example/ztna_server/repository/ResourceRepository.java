@@ -20,6 +20,9 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
     @EntityGraph(attributePaths = {"connector"})
     List<Resource> findAllByOrderByNameAsc();
 
+    // Xác minh liên tục: ứng dụng còn bật và connector của nó còn bật
+    boolean existsByIdAndEnabledTrueAndConnectorEnabledTrue(UUID id);
+
     // Dùng cho quản lý app: kiểm tra trùng tên, đếm app của connector
     Optional<Resource> findByName(String name);
     boolean existsByName(String name);
@@ -47,6 +50,7 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
           AND (rule.expiresAt IS NULL OR rule.expiresAt > :now)
     )
     AND r.enabled = true
+    AND r.connector.enabled = true
     ORDER BY r.name ASC
     """)
     List<ResourceAccess> findAllByUserId(@Param("userId") UUID userId, @Param("now") Instant now);

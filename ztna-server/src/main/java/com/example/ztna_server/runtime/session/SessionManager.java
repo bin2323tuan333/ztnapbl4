@@ -77,39 +77,45 @@ public class SessionManager {
 
 
     public int closeByUserId(String userId, String reason) {
-        var closes = byUserId.get(userId);
         int closed = 0;
-        for (String id : closes) {
-            if (closeSession(id, reason)) closed++;
+        for (SessionContext s : getByUserId(userId)) {
+            if (closeSession(s.getStreamId(), reason)) closed++;
         }
         return closed;
     }
 
     public int closeByConnectorId(String connectorId, String reason) {
-        var closes = byConnectorId.get(connectorId);
         int closed = 0;
-        for (String id : closes) {
-            if (closeSession(id, reason)) closed++;
+        for (SessionContext s : getByConnectorId(connectorId)) {
+            if (closeSession(s.getStreamId(), reason)) closed++;
         }
         return closed;
     }
 
+    /** Xoá phiên khỏi mọi chỉ mục và đánh dấu CLOSED. Trả false nếu phiên không còn (đã đóng trước đó). */
     public boolean closeSession(String streamId, String reason) {
-        SessionContext closed = byStreamId.get(streamId);
-        byUserId.get(closed.getUserId()).remove(streamId);
-        byConnectorId.get(closed.getConnectorId()).remove(streamId);
-        byStreamId.remove(streamId);
-        closed.close(SessionState.CLOSED, reason);
-        return true;
+        return terminate(streamId, SessionState.CLOSED, reason);
     }
 
     public boolean failSession(String streamId, String reason) {
-        SessionContext closed = byStreamId.get(streamId);
-        byUserId.get(closed.getUserId()).remove(streamId);
-        byConnectorId.get(closed.getConnectorId()).remove(streamId);
-        byStreamId.remove(streamId);
-        closed.close(SessionState.FAILED, reason);
+        return terminate(streamId, SessionState.FAILED, reason);
+    }
+
+    private synchronized boolean terminate(String streamId, SessionState finalState, String reason) {
+        if (streamId == null) return false;
+        SessionContext removed = byStreamId.remove(streamId);
+        if (removed == null) return false;
+        removeFromIndex(byUserId, removed.getUserId(), streamId);
+        removeFromIndex(byConnectorId, removed.getConnectorId(), streamId);
+        removed.close(finalState, reason);
         return true;
+    }
+
+    private static void removeFromIndex(Map<String, Set<String>> index, String key, String streamId) {
+        Set<String> ids = index.get(key);
+        if (ids == null) return;
+        ids.remove(streamId);
+        if (ids.isEmpty()) index.remove(key);
     }
 
     @PreDestroy

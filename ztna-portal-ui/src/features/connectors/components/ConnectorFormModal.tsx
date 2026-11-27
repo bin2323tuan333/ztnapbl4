@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { X, Server, AlertCircle, Loader2 } from 'lucide-react';
-import { connectorApi, type ConnectorDetail } from '../api/connectorApi';
+import { connectorApi } from '../api/connectorApi';
 
 interface Props {
     isOpen: boolean;

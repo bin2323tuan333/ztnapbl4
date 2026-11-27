@@ -13,6 +13,10 @@ import com.example.ztna_server.mapper.RuleMapper;
 import com.example.ztna_server.repository.ResourceRepository;
 import com.example.ztna_server.repository.RuleRepository;
 import com.example.ztna_server.repository.UserRepository;
+import com.example.ztna_server.enums.ErrorCode;
+import com.example.ztna_server.exception.AppException;
+import com.example.ztna_server.event.AccessPolicyChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +37,7 @@ public class RuleService {
     private final ResourceRepository resourceRepository;
     private final RuleMapper ruleMapper;
     private final AuditService auditService;   
+    private final ApplicationEventPublisher eventPublisher;   // báo thay đổi quyền để đóng phiên không còn hợp lệ
 
     @Transactional(readOnly = true)
     public List<RuleSummaryResponse> getAllRules() {
@@ -44,19 +49,20 @@ public class RuleService {
     @Transactional(readOnly = true)
     public RuleDetailResponse getRuleDetail(UUID id) {
         Rule rule = ruleRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rule không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.RULE_NOT_FOUND));
         return ruleMapper.toDetailResponse(rule);
     }
 
     @Transactional
     public RuleDetailResponse createRule(RuleCreationRequest request) {
-        if (ruleRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Tên Rule đã tồn tại!");
+        // Tên được lưu sau khi trim, nên phải kiểm trùng bằng tên đã trim (tránh lọt xuống ràng buộc unique của DB -> 500)
+        if (ruleRepository.existsByName(request.getName().trim())) {
+            throw new AppException(ErrorCode.RULE_EXISTED);
         }
 
         // Validate: Ngày hết hạn (nếu có) phải ở tương lai
         if (request.getExpiresAt() != null && request.getExpiresAt().isBefore(Instant.now())) {
-            throw new RuntimeException("Thời điểm hết hạn phải ở trong tương lai!");
+            throw new AppException(ErrorCode.RULE_INVALID_EXPIRY);
         }
 
         Rule rule = ruleMapper.toEntity(request);
@@ -98,7 +104,7 @@ public class RuleService {
     @Transactional
     public void updateRuleUsers(UUID id, RuleUserAssignmentRequest request) {
         Rule rule = ruleRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rule không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.RULE_NOT_FOUND));
 
         Set<User> newUsers = (request.getUserIds() == null || request.getUserIds().isEmpty())
                 ? new HashSet<>()
@@ -109,6 +115,7 @@ public class RuleService {
         ruleRepository.save(rule);
 
         // Audit log
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent("ASSIGN_USER_TO_RULE"));
         auditService.log(
                 "ASSIGN_USER_TO_RULE",
                 TargetType.SYSTEM,
@@ -121,7 +128,7 @@ public class RuleService {
     @Transactional
     public void updateRuleResources(UUID id, RuleResourceAssignmentRequest request) {
         Rule rule = ruleRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rule không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.RULE_NOT_FOUND));
 
         Set<Resource> newResources = (request.getResourceIds() == null || request.getResourceIds().isEmpty())
                 ? new HashSet<>()
@@ -132,6 +139,7 @@ public class RuleService {
         ruleRepository.save(rule);
 
         // Audit log
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent("ASSIGN_RESOURCE_TO_RULE"));
         auditService.log(
                 "ASSIGN_RESOURCE_TO_RULE",
                 TargetType.SYSTEM,
@@ -144,12 +152,13 @@ public class RuleService {
     @Transactional
     public void toggleStatus(UUID id) {
         Rule rule = ruleRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rule không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.RULE_NOT_FOUND));
 
         rule.setEnabled(!rule.isEnabled());
         rule.setUpdatedAt(Instant.now());
         ruleRepository.save(rule);
 
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent(rule.isEnabled() ? "ENABLE_RULE" : "DISABLE_RULE"));
         // Audit log
         auditService.log(
                 rule.isEnabled() ? "ENABLE_RULE" : "DISABLE_RULE",
@@ -163,7 +172,7 @@ public class RuleService {
     @Transactional
     public void deleteRule(UUID id) {
         Rule rule = ruleRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rule không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.RULE_NOT_FOUND));
 
         String ruleName = rule.getName();
 
@@ -175,6 +184,7 @@ public class RuleService {
         ruleRepository.delete(rule);
 
         // Audit log
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent("DELETE_RULE"));
         auditService.log(
                 "DELETE_RULE",
                 TargetType.SYSTEM,

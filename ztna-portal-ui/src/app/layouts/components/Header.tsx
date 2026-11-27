@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, ChevronDown, LogOut } from 'lucide-react';
+import { logout } from '../../../shared/utils/auth';
 import './Header.css';
 
 const Header: React.FC = () => {
@@ -20,14 +21,9 @@ const Header: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('username');
-        localStorage.removeItem('role');
-
+    const handleLogout = async () => {
         setDropdownOpen(false);
-
+        await logout();   // thu hồi refresh token phía server
         navigate('/login');
     };
 

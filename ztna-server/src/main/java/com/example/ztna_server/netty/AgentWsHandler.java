@@ -10,6 +10,7 @@ import com.example.ztna_server.protocol.frames.*;
 import com.example.ztna_server.repository.ConnectorRepository;
 import com.example.ztna_server.repository.ResourceRepository;
 import com.example.ztna_server.repository.UserRepository;
+import com.example.ztna_server.runtime.connection.agent.AccessTicketRegistry;
 import com.example.ztna_server.runtime.connection.agent.AgentConnection;
 import com.example.ztna_server.runtime.connection.agent.AgentConnectionRegistry;
 import com.example.ztna_server.runtime.connection.agent.PendingConnect;
@@ -24,6 +25,7 @@ import com.example.ztna_server.service.AccessLogService;
 import com.example.ztna_server.service.JwtService;
 import com.example.ztna_server.service.RuleService;
 import com.example.ztna_server.service.SessionLifecycleService;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -56,7 +58,9 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
     private final PendingConnectRegistry pendingConnectRegistry;
     private final RuleService ruleService;
     private final RelayEngine relayEngine;
-    private volatile String userId;
+    private final AccessTicketRegistry accessTicketRegistry;
+    // Không lưu "userId của kết nối": một Agent có thể được nhiều người dùng chung.
+    // Danh tính đi theo từng vé (AccessTicketRegistry) do HTTP_ACCESS cấp.
 
 
     @Override
@@ -80,8 +84,8 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
             switch (type) {
                 case FrameType.HTTP_ACCESS -> handleHttpAccess(ctx, buf);
                 case FrameType.RESOURCE_ACCESS -> handleResourceAccess(ctx, buf);
-                case FrameType.DATA -> handleData(buf);
-                case FrameType.CLOSE -> handleClose(buf);
+                case FrameType.DATA -> handleData(ctx, buf);
+                case FrameType.CLOSE -> handleClose(ctx, buf);
                 default -> log.warn("[User] Unknown frame: 0x{}", String.format("%02X", type));
             }
         } catch (Exception e) {
@@ -114,31 +118,32 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
 
         String uid;
         try {
-            if (jwtService.isTokenExpired(jwt)) {
-                UUID Uid = jwtService.extractUserId(jwt);
-                User user = userRepository.findById(Uid).orElse(null);
-                log.warn("[Lifecycle] HTTP_ACCESS bị từ chối: JWT hết hạn, reqId={}, uid={}, appId={}, ip={}", reqId, Uid, resourceId, ip);
-                accessLogService.log(
-                        Uid,
-                        ip,
-                        user == null ? "Unknown" : user.getFullName(),
-                        null,
-                        resourceId,
-                        null,
-                        null,
-                        null,
-                        Decision.DENY,
-                        "JWT hết hạn"
-                );
-                sendHttpFail(
-                        ctx,
-                        reqId,
-                        HttpResFrame.STATUS_AUTH_FAILED,
-                        "Phiên đăng nhập đã hết, hãy đăng nhập lại."
-                );
-                return;
-            }
-            uid = jwtService.extractUserId(jwt).toString();
+            // Chỉ nhận access token (có claim typ=access). Refresh token hạn 7 ngày bị từ chối.
+            uid = jwtService.parseAccessClaims(jwt).getSubject();
+        } catch (ExpiredJwtException e) {
+            UUID expiredUid = null;
+            try { expiredUid = UUID.fromString(e.getClaims().getSubject()); } catch (Exception ignored) { }
+            User user = expiredUid == null ? null : userRepository.findById(expiredUid).orElse(null);
+            log.warn("[Lifecycle] HTTP_ACCESS bị từ chối: JWT hết hạn, reqId={}, uid={}, appId={}, ip={}", reqId, expiredUid, resourceId, ip);
+            accessLogService.log(
+                    expiredUid,
+                    ip,
+                    user == null ? "Unknown" : user.getFullName(),
+                    null,
+                    resourceId,
+                    null,
+                    null,
+                    null,
+                    Decision.DENY,
+                    "JWT hết hạn"
+            );
+            sendHttpFail(
+                    ctx,
+                    reqId,
+                    HttpResFrame.STATUS_AUTH_FAILED,
+                    "Phiên đăng nhập đã hết, hãy đăng nhập lại."
+            );
+            return;
         } catch (Exception e) {
             log.warn("[Lifecycle] HTTP_ACCESS bị từ chối: JWT không hợp lệ, reqId={}, appId={}, ip={}, err={}",
                     reqId, resourceId, ip, e.getMessage());
@@ -247,6 +252,33 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
             return;
         }
 
+        // Kiểm rule ngay ở HTTP_ACCESS: không có quyền thì không cấp vé, Agent không mở cổng / trình duyệt,
+        // và log ghi DENY (trước đây ghi ALLOW "Xác thực thành công" làm thống kê sai).
+        // Kiểm trước trạng thái connector để người không có quyền không biết được connector đang online hay không.
+        if (!ruleService.hasAccess(userId, resource.getId())) {
+            log.warn("[Lifecycle] HTTP_ACCESS bị từ chối: không có quyền, reqId={}, user={}, resource={}, ip={}",
+                    reqId, uid, resource.getName(), ip);
+            accessLogService.log(
+                    userId,
+                    ip,
+                    authed.getFullName(),
+                    resource.getId(),
+                    resource.getName(),
+                    resource.getHost(),
+                    connector.getId(),
+                    connector.getName(),
+                    Decision.DENY,
+                    "Không có quyền truy cập Resource"
+            );
+            sendHttpFail(
+                    ctx,
+                    reqId,
+                    HttpResFrame.STATUS_FORBIDDEN,
+                    "Bạn không có quyền truy cập ứng dụng này"
+            );
+            return;
+        }
+
         if (!connectorConnectionRegistry.isOnline(target.connectorId())) {
             log.warn("[Lifecycle] Connector offline: reqId={}, connector={}, resource={}",
                     reqId, target.connectorId(), resourceId);
@@ -276,21 +308,9 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
 
 
 
-        AgentConnection currentForUId = agentConnectionRegistry.getByUserId(uid);
-        if (this.userId == null) {
-            if (currentForUId == null) {
-                agentConnectionRegistry.register(uid, ctx.channel());
-                log.info("Ket noi thanh cong tu {}", uid);
-            } else {
-                agentConnectionRegistry.removeByUserId(uid);
-                agentConnectionRegistry.register(uid, ctx.channel());
-                log.info("Ket noi lai tu {}", uid);
-            }
-            this.userId = uid;
-        } else if (!this.userId.equals(uid)) {
-            log.warn("[Lifecycle] User mismatch: expected={}, received={}, reqId={}", this.userId, uid, reqId);
-            agentConnectionRegistry.changeUser(this.userId, uid);
-        }
+        // Cấp vé gắn với đúng người dùng + ứng dụng + kênh Agent này.
+        // Agent gửi lại vé trong mỗi RESOURCE_ACCESS để Server biết ai đang xin mở kết nối.
+        AccessTicketRegistry.AccessTicket ticket = accessTicketRegistry.issue(uid, resource.getId().toString(), ctx.channel());
 
         log.info("[Lifecycle] HTTP_ACCESS OK: reqId={}, user={}, resource={}, connector={}, ip={}", reqId, uid, resource.getName(), connector.getName(), ip);
 
@@ -307,7 +327,8 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
                 "Xác thực thành công"
         );
 
-        HttpResFrame response = HttpResFrame.ok(reqId, "");
+        // Trường streamId của HTTP_RESPONSE trước đây bỏ trống, nay dùng để gửi vé về Agent
+        HttpResFrame response = HttpResFrame.ok(reqId, ticket.ticket());
         ctx.writeAndFlush(
                 new BinaryWebSocketFrame(
                         Unpooled.wrappedBuffer(response.encode())
@@ -333,12 +354,15 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
             return;
         }
 
-        String uid = this.userId;
-        AgentConnection agent = agentConnectionRegistry.getByUserId(uid);
-        if (agent == null || agent.getChannel() != ctx.channel() || !agent.isActive()) {
-            sendResourceFail(ctx, reqId, "Agent connection không hợp lệ hoặc đã hết hạn");
+        // Lấy người dùng từ vé, không dùng trạng thái chung của kết nối.
+        // Vé phải do chính kênh này nhận và đúng ứng dụng đang xin truy cập.
+        AccessTicketRegistry.AccessTicket ticket = accessTicketRegistry.get(req.getTicket());
+        if (ticket == null || ticket.agentChannel() != ctx.channel() || !ticket.resourceId().equals(resourceId)) {
+            log.warn("[Gateway] Vé truy cập không hợp lệ: reqId={}, appId={}, ip={}", reqId, resourceId, ip);
+            sendResourceFail(ctx, reqId, "Vé truy cập không hợp lệ hoặc đã hết hạn, hãy mở lại ứng dụng từ Portal");
             return;
         }
+        String uid = ticket.userId();
 
         RouteTarget target = routingRegistry.getByResourceId(resourceId);
         if (target == null) {
@@ -407,6 +431,7 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
                 .requestId(reqId)
                 .streamId(streamId)
                 .connectorId(connectorConnection.getConnectorId())
+                .agentChannel(ctx.channel())
                 .build();
         pendingConnectRegistry.add(pending);
         ConnectFrame connectFrame = new ConnectFrame(streamId, resourceId);
@@ -434,31 +459,31 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
         ctx.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(resp.encode())));
     }
 
-    private void handleData(ByteBuf buf) {
+    private void handleData(ChannelHandlerContext ctx, ByteBuf buf) {
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
         DataFrame frame = new DataFrame();
         frame.decode(data);
 
-        RelayResult result = relayEngine.forwardToConnector(frame);
+        RelayResult result = relayEngine.forwardToConnector(frame, ctx.channel());
     }
 
-    public void handleClose(ByteBuf buf) {
+    public void handleClose(ChannelHandlerContext ctx, ByteBuf buf) {
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
         CloseFrame frame = new CloseFrame();
         frame.decode(data);
         String streamId = frame.getStreamId();
         log.info("[User] CLOSE stream={} reason={}", streamId, frame.getReasonText());
-        sessionLifecycleService.closeSession(streamId, "CLIENT_CLOSED: " + frame.getReasonText());
+        sessionLifecycleService.closeSessionFrom(ctx.channel(), streamId, "CLIENT_CLOSED: " + frame.getReasonText());
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        if (userId == null) return;
-        log.info("[User] {} disconnected", userId);
+        log.info("[User] Agent disconnected: {}", clientIp(ctx));
         userManager.removeByChannel(ctx.channel());
-        sessionLifecycleService.onAgentDisconnect(userId);
+        accessTicketRegistry.removeByChannel(ctx.channel());
+        sessionLifecycleService.onAgentChannelClosed(ctx.channel());
     }
 
     @Override

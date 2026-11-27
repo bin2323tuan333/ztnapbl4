@@ -92,7 +92,15 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         } else {
             System.err.println("[Tunnel] Gateway từ chối cấp stream: " + resFrame.getReason());
             clientOpenRegistry.remove(reqId);
-            localChannel.close();
+            // Báo lý do cho người dùng (trang lỗi nếu là trình duyệt) rồi mới đóng
+            LocalHandler localHandler = localChannel.pipeline().get(LocalHandler.class);
+            if (localHandler != null) {
+                // Chạy trên event loop của kênh local (nơi LocalHandler đệm dữ liệu) để tránh tranh chấp luồng
+                String reason = resFrame.getReason();
+                localChannel.eventLoop().execute(() -> localHandler.onAccessDenied(reason));
+            } else {
+                localChannel.close();
+            }
         }
     }
 
@@ -115,7 +123,8 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         String jsonBody;
 
         if (resFrame.isOk()) {
-            LocalServer server = new LocalServer(resourceId);
+            // Vé truy cập Server gửi về trong trường streamId của HTTP_RESPONSE
+            LocalServer server = new LocalServer(resourceId, resFrame.getStreamId());
             int port = server.start();
 
             String type = pendingHttpRequest.getTypes(reqId);
@@ -136,9 +145,13 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
             status = HttpResponseStatus.OK;
             jsonBody = "{\"status\":\"success\",\"port\":" + port + "}";
         } else {
-            status = resFrame.getStatus() == HttpResFrame.STATUS_AUTH_FAILED
-                    ? HttpResponseStatus.UNAUTHORIZED
-                    : HttpResponseStatus.INTERNAL_SERVER_ERROR;
+            if (resFrame.getStatus() == HttpResFrame.STATUS_AUTH_FAILED) {
+                status = HttpResponseStatus.UNAUTHORIZED;
+            } else if (resFrame.getStatus() == HttpResFrame.STATUS_FORBIDDEN) {
+                status = HttpResponseStatus.FORBIDDEN;   // đã đăng nhập nhưng không có rule cho phép
+            } else {
+                status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+            }
             jsonBody = "{\"error\":\"" + resFrame.getReason() + "\"}";
         }
         FullHttpResponse response = new DefaultFullHttpResponse(

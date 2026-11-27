@@ -42,16 +42,6 @@ const MOCK_LOGS: NetworkLog[] = Array.from({ length: 15 }).map((_, i) => ({
     connectorZone: 'Homelab',
 }));
 
-const MOCK_ROUTE: RouteTraceData = {
-    id: 'route-1',
-    nodes: [
-        { type: 'source', name: 'Luongs-MacBook-Pro...', latencyToNext: 23 },
-        { type: 'pop', name: 'Singapore', latencyToNext: 13 },
-        { type: 'connector', name: 'Homelab', latencyToNext: 1 },
-        { type: 'destination', name: '10.10.30.212', ip: '10.10.30.212' },
-    ]
-};
-
 export const logApi = {
     getLogs: async (): Promise<NetworkLog[]> => {
         await new Promise(resolve => setTimeout(resolve, 500));

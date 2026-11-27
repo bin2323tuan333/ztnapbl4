@@ -12,14 +12,16 @@ public class LocalServerInitializer extends ChannelInitializer<SocketChannel> {
     private final StreamRegistry streamRegistry = Factory.streamRegistry;
 
     private String resourceId;
+    private final String ticket;
 
-    public LocalServerInitializer(String resourceId) {
+    public LocalServerInitializer(String resourceId, String ticket) {
         this.resourceId = resourceId;
+        this.ticket = ticket;
     }
 
     @Override
     protected void initChannel(SocketChannel ch) {
         ch.config().setOption(ChannelOption.TCP_NODELAY, true);
-        ch.pipeline().addLast(new LocalHandler(resourceId));
+        ch.pipeline().addLast(new LocalHandler(resourceId, ticket));
     }
 }

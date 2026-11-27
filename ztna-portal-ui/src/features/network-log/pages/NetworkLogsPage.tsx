@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { RefreshCw, Filter, Calendar } from 'lucide-react';
 import { useNetworkLogs } from '../hooks/useNetworkLogs';
 import { LogTable } from '../components/LogTable';
@@ -7,7 +6,6 @@ import '../styles/NetworkLogs.css';
 
 export const NetworkLogsPage = () => {
     const { logs, isLoading, selectedLogId, handleSelectLog, routeData } = useNetworkLogs();
-    const [timeRange, setTimeRange] = useState('7d');
 
     return (
         <div className="network-logs-layout">

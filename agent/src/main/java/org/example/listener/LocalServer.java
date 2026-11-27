@@ -19,16 +19,19 @@ public class LocalServer {
 
     private Channel channel;
     private String resourceId;
+    // Vé Server cấp cho người dùng đã bấm "Truy cập" (gửi kèm mỗi RESOURCE_ACCESS)
+    private final String ticket;
 
-    public LocalServer(String resourceId) {
+    public LocalServer(String resourceId, String ticket) {
         this.resourceId = resourceId;
+        this.ticket = ticket;
     }
 
     public int start()  {
         ServerBootstrap b = new ServerBootstrap();
         b.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .childHandler(new LocalServerInitializer(resourceId));
+                .childHandler(new LocalServerInitializer(resourceId, ticket));
 
         try {
             channel = b.bind("127.0.0.1", 0).sync().channel();

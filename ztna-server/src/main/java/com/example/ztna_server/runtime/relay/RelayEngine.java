@@ -19,15 +19,16 @@ public class RelayEngine {
 
     private final SessionManager sessionManager;
 
-    public RelayResult forwardToConnector(DataFrame frame) {
-        return forward(frame, Direction.AGENT_TO_CONNECTOR);
+    /** sender: kênh WS đã gửi frame. Chỉ chuyển tiếp khi stream thuộc đúng kênh đó. */
+    public RelayResult forwardToConnector(DataFrame frame, Channel sender) {
+        return forward(frame, Direction.AGENT_TO_CONNECTOR, sender);
     }
 
-    public RelayResult forwardToAgent(DataFrame frame) {
-        return forward(frame, Direction.CONNECTOR_TO_AGENT);
+    public RelayResult forwardToAgent(DataFrame frame, Channel sender) {
+        return forward(frame, Direction.CONNECTOR_TO_AGENT, sender);
     }
 
-    private RelayResult forward(DataFrame frame, Direction dir) {
+    private RelayResult forward(DataFrame frame, Direction dir, Channel sender) {
         if (frame == null) {
             return RelayResult.INVALID_FRAME;
         }
@@ -59,6 +60,13 @@ public class RelayEngine {
         Channel dest = dir == Direction.AGENT_TO_CONNECTOR
                 ? session.getConnectorChannel()
                 : session.getAgentChannel();
+
+        // Chống chèn dữ liệu: một Agent/Connector biết streamId của người khác cũng không gửi được vào stream đó
+        if (sender != source) {
+            log.warn("[Relay] Từ chối frame: stream={} không thuộc kênh gửi, dir={}", streamId, dir);
+            releaseQuietly(frame);
+            return RelayResult.INVALID_FRAME;
+        }
 
         if (source == null || !source.isActive()) {
             log.warn("[Relay] Source channel inactive: stream={} dir={}", streamId, dir);

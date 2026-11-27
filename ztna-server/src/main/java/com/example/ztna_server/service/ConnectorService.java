@@ -9,7 +9,12 @@ import com.example.ztna_server.entity.Connector;
 import com.example.ztna_server.enums.TargetType;
 import com.example.ztna_server.mapper.ConnectorMapper;
 import com.example.ztna_server.repository.ConnectorRepository;
+import com.example.ztna_server.repository.ResourceRepository;
 import com.example.ztna_server.runtime.connection.connector.ConnectorConnectionRegistry;
+import com.example.ztna_server.enums.ErrorCode;
+import com.example.ztna_server.exception.AppException;
+import com.example.ztna_server.event.AccessPolicyChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +30,9 @@ public class ConnectorService {
     private final ConnectorRepository connectorRepository;
     private final ConnectorMapper connectorMapper;
     private final AuditService auditService;
+    private final ApplicationEventPublisher eventPublisher;   // báo thay đổi quyền để đóng phiên không còn hợp lệ
     private final ConnectorConnectionRegistry connectorConnectionRegistry;
+    private final ResourceRepository resourceRepository;
 
 
     @Transactional(readOnly = true)
@@ -45,7 +52,7 @@ public class ConnectorService {
     @Transactional(readOnly = true)
     public ConnectorDetailResponse getConnectorById(UUID id) {
         Connector connector = connectorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Connector không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.CONNECTOR_NOT_FOUND));
         return connectorMapper.toDetailResponse(connector);
     }
 
@@ -54,7 +61,7 @@ public class ConnectorService {
     @Transactional
     public ConnectorDetailResponse createConnector(ConnectorCreationRequest request) {
         if (connectorRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Tên Connector đã tồn tại. Vui lòng chọn tên khác!");
+            throw new AppException(ErrorCode.CONNECTOR_EXISTED);
         }
 
         Connector connector = connectorMapper.toEntity(request);
@@ -78,10 +85,10 @@ public class ConnectorService {
     @Transactional
     public ConnectorDetailResponse updateConnector(UUID id, ConnectorUpdateRequest request) {
         Connector connector = connectorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Connector không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.CONNECTOR_NOT_FOUND));
 
         if (connectorRepository.existsByNameAndIdNot(request.getName(), id)) {
-            throw new RuntimeException("Tên Connector đã được sử dụng bởi thiết bị khác!");
+            throw new AppException(ErrorCode.CONNECTOR_EXISTED);
         }
 
         connectorMapper.updateEntityFromRequest(request, connector);
@@ -104,17 +111,19 @@ public class ConnectorService {
     @Transactional
     public ConnectorDetailResponse toggleStatus(UUID id) {
         Connector connector = connectorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Connector không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.CONNECTOR_NOT_FOUND));
 
         connector.setEnabled(!connector.isEnabled());
         connector.setUpdatedAt(Instant.now());
 
         if (!connector.isEnabled()) {
-            connectorConnectionRegistry.remove(id.toString());
+            // Ngắt kết nối WS đang mở của connector (trước đây gọi remove(connectionId) với connectorId nên không có tác dụng)
+            connectorConnectionRegistry.removeByConnectorId(id.toString());
         }
 
         Connector saved = connectorRepository.save(connector);
 
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent(saved.isEnabled() ? "ENABLE_CONNECTOR" : "DISABLE_CONNECTOR"));
         // Audit log
         auditService.log(
                 saved.isEnabled() ? "ENABLE_CONNECTOR" : "DISABLE_CONNECTOR",
@@ -130,12 +139,19 @@ public class ConnectorService {
     @Transactional
     public void deleteConnector(UUID id) {
         Connector connector = connectorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Connector không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.CONNECTOR_NOT_FOUND));
 
-        connectorConnectionRegistry.remove(connector.getId().toString());
+        // Còn ứng dụng thuộc connector thì không xoá (trước đây xoá dây chuyền và lỗi 500 khi ứng dụng nằm trong rule)
+        long resourceCount = resourceRepository.countByConnectorId(id);
+        if (resourceCount > 0) {
+            throw new AppException(ErrorCode.CONNECTOR_IN_USE);
+        }
+
+        connectorConnectionRegistry.removeByConnectorId(connector.getId().toString());
         String name = connector.getName();
         connectorRepository.deleteById(id);
 
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent("DELETE_CONNECTOR"));
         auditService.log(
                 "DELETE_CONNECTOR",
                 TargetType.CONNECTOR,

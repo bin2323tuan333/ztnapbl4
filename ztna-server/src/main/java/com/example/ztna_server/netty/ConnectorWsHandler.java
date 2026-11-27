@@ -82,7 +82,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
             switch (type) {
                 case FrameType.ROUTING_REQUEST -> handleRoutingReq(ctx, data);
                 case FrameType.CONNECT_ACK -> handleConnectAck(ctx, data);
-                case FrameType.DATA -> handleData(data);
+                case FrameType.DATA -> handleData(ctx, data);
                 case FrameType.CLOSE -> handleClose(ctx, data);
                 default -> log.warn("[Connector] Unknown frame type: 0x{}", String.format("%02X", type));
             }
@@ -113,6 +113,17 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
                 return;
             }
 
+            // Kiểm lại trạng thái mỗi lần connector xin routing: đã bị tắt hoặc xoá thì ngắt
+            boolean stillEnabled = connectorRepository.findById(java.util.UUID.fromString(connectorId))
+                    .map(Connector::isEnabled)
+                    .orElse(false);
+            if (!stillEnabled) {
+                log.warn("[Connector] Connector đã bị tắt hoặc xoá, ngắt kết nối: {}", connectorId);
+                connectorConnectionRegistry.removeByConnectorId(connectorId);
+                ctx.close();
+                return;
+            }
+
             sendRoutingTable(ctx);
             return;
         }
@@ -132,7 +143,10 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
             log.warn("[Connector] Replacing old connection: connectorId={}, oldConnection={}",
                     newConnectorId, oldConnection.getConnectionId());
 
-            sessionLifecycleService.onConnectorDisconnect(oldConnection.getConnectionId());
+            // Phiên đang có của connector này đều thuộc kết nối cũ: đóng hết rồi gỡ kết nối cũ
+            // (trước đây truyền nhầm connectionId vào hàm cần connectorId nên không đóng được gì)
+            sessionLifecycleService.onConnectorDisconnect(newConnectorId);
+            connectorConnectionRegistry.remove(oldConnection.getConnectionId());
         }
 
         // Đăng ký connection mới.
@@ -210,24 +224,22 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
 
         if (!ack.isOk()) {
             pendingConnectRegistry.remove(streamId);
-            AgentConnection agent = agentConnectionRegistry.getByUserId(pending.getUserId());
-            if (agent != null && agent.isActive()) {
-                sendResourceFail(agent.getChannel(), pending.getRequestId(), "Connector từ chối kết nối");
-            }
+            // Gửi về đúng kênh Agent đã xin mở kết nối
+            sendResourceFail(pending.getAgentChannel(), pending.getRequestId(), "Connector từ chối kết nối");
             return;
         }
 
         sessionLifecycleService.openSession(streamId);
     }
 
-    private void handleData(ByteBuf buf) {
+    private void handleData(ChannelHandlerContext ctx, ByteBuf buf) {
         byte[] data = new byte[buf.readableBytes()];
         buf.getBytes(buf.readerIndex(), data);
 
         DataFrame frame = new DataFrame();
         frame.decode(data);
 
-        RelayResult result = relayEngine.forwardToAgent(frame);
+        RelayResult result = relayEngine.forwardToAgent(frame, ctx.channel());
 
         if (result != RelayResult.SUCCESS) {
             log.warn("[Connector] DATA relay failed: streamId={}, result={}", frame.getStreamId(), result);
@@ -249,7 +261,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
         CloseFrame frame = new CloseFrame();
         frame.decode(data);
         log.info("[Connector] CLOSE: streamId={}, reason={}", frame.getStreamId(), frame.getReasonText());
-        sessionLifecycleService.closeSession(frame.getStreamId(), "Connector close");
+        sessionLifecycleService.closeSessionFrom(ctx.channel(), frame.getStreamId(), "Connector close");
     }
 
 
@@ -266,8 +278,14 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
     public void channelInactive(ChannelHandlerContext ctx) {
         if (registered && connectorId != null && connectionId != null) {
             log.info("[Connector] Disconnected: connectorId={}, connectionId={}", connectorId, connectionId);
-            ConnectorConnection removed = connectorConnectionRegistry.getByConnectorId(connectorId);
-            if (removed != null) {
+            ConnectorConnection current = connectorConnectionRegistry.getByConnectorId(connectorId);
+            // current == null: admin đã tắt/xoá connector (registry đã gỡ trước khi kênh đóng).
+            // current là kênh này: mất kết nối bình thường. Cả hai trường hợp đều phải đóng phiên.
+            // current là kênh khác: connector đã nối lại bằng kết nối mới, không đụng phiên của kết nối mới.
+            if (current == null || current.getChannel() == ctx.channel()) {
+                if (current != null) {
+                    connectorConnectionRegistry.remove(current.getConnectionId());
+                }
                 sessionLifecycleService.onConnectorDisconnect(connectorId);
             }
         }
@@ -303,7 +321,9 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
     private void sendResourceFail(Channel agentChannel, String requestId, String reason) {
         if (agentChannel == null || !agentChannel.isActive()) return;
         try {
-            ResourceAccessFrame frame = new ResourceAccessFrame(requestId, reason);
+            // Phải là RESOURCE_RESPONSE (0x06): Agent đang chờ đúng loại frame này để biết yêu cầu bị từ chối.
+            // Trước đây gửi nhầm RESOURCE_ACCESS (0x05) nên Agent bỏ qua và người dùng bị treo.
+            ResourceResFrame frame = ResourceResFrame.failed(requestId, ResourceResFrame.STATUS_ERROR, reason);
             agentChannel.writeAndFlush(new BinaryWebSocketFrame(
                     Unpooled.wrappedBuffer(frame.encode())
             )).addListener(f -> {

@@ -38,9 +38,9 @@ public class TunnelClient {
         );
     }
 
-    public void sendResourceAccess(String reqId, String resourceId) {
+    public void sendResourceAccess(String reqId, String resourceId, String ticket) {
         sendAndConnect(
-                new ResourceAccessFrame(reqId, resourceId).encode()
+                new ResourceAccessFrame(reqId, resourceId, ticket).encode()
         );
     }
 

@@ -14,7 +14,7 @@ Hệ thống gồm ba thành phần chính:
 | ZTNA Server | `ztna-server/` | Xác thực, phân quyền, quản lý Connector, routing, session và relay dữ liệu |
 | Connector | `connector/` | Kết nối tới Server và mở kết nối TCP tới tài nguyên nội bộ |
 
-**Lưu ý:** Root `pom.xml` khai báo ba Maven module `agent`, `ztna-server` và `connector`. Thư mục `ztna-connector/` là một implementation/prototype khác, không thuộc danh sách module build chính.
+**Lưu ý:** Root `pom.xml` khai báo ba Maven module `agent`, `ztna-server` và `connector`. Giao diện web nằm ở `ztna-portal-ui/` (React + Vite).
 
 ## 2. Kiến trúc tổng quan
 
@@ -135,56 +135,103 @@ ztnapbl4/
 ├── connector/
 │   └── src/
 │
-├── ztna-connector/
-│   └── Implementation/prototype khác
-│
 ├── ztna-portal-ui/
-│   └── Frontend
+│   └── Frontend (React + Vite)
 │
+├── database/
+│   └── schema.sql      (cấu trúc bảng MySQL)
+│
+├── docker-compose.yml  (MySQL + Server + giao diện cho máy Server)
+├── .env.example        (mẫu biến môi trường)
 ├── README.md
-├── architecture.md
-├── design.md
-├── flow.md
-├── sql.md
 └── pom.xml
 ```
 
-## 7. Build project
+## 7. Cổng và biến môi trường
 
-Chạy tại thư mục gốc:
+| Thành phần | Cổng | Ghi chú |
+|---|---|---|
+| ZTNA Server – REST API | 443 (HTTP thường) | Giao diện web gọi `http://<hostname>:443` |
+| ZTNA Server – WS cho Connector | 8443, đường dẫn `/connector` | |
+| ZTNA Server – WS cho Agent | 9443, đường dẫn `/app` | |
+| Giao diện web | 3000 | `npm run dev` hoặc container `web` |
+| Agent – HTTP nội bộ | 127.0.0.1:9999 | Portal gọi `/open?appId=&type=` để mở ứng dụng |
+
+Server đọc cấu hình từ biến môi trường, mỗi biến có giá trị mặc định cho máy dev (xem `.env.example`):
+
+| Biến | Mặc định | Ý nghĩa |
+|---|---|---|
+| `DB_HOST`, `DB_PORT`, `DB_NAME` | `localhost`, `3306`, `ztna_db` | MySQL. Database tự tạo nếu chưa có |
+| `DB_USERNAME`, `DB_PASSWORD` | `root`, giá trị trong `application.yaml` | XAMPP mặc định: `DB_PASSWORD` để trống |
+| `JWT_SECRET` | (trống) | Khoá ký JWT, ≥ 32 ký tự. Trống thì server tự sinh ngẫu nhiên mỗi lần khởi động |
+| `SERVER_PORT` | `443` | Cổng REST API |
+
+Agent: địa chỉ Server lấy theo thứ tự tham số dòng lệnh → biến `SERVER_URL` → `ws://localhost:9443/app`.
+Connector: biến `SERVER_URL` (vd `ws://<IP-Server>:8443/connector`) và `CONNECTOR_TOKEN` (Connection String của connector, xem trên trang Connectors).
+
+Tài khoản và connector mẫu được tạo lần chạy đầu trong `ztna-server/src/main/java/com/example/ztna_server/config/DataInit.java`.
+
+## 8. Chạy demo từng bước (LAN)
+
+Mô hình: 1 máy Server (MySQL + Server + giao diện web), các máy khác chạy Agent hoặc Connector. Thay `<IP-Server>` bằng IP LAN của máy Server (`ipconfig`). Mở firewall Windows cho cổng 443, 8443, 9443, 3000 trên máy Server.
+
+### Cách A – Máy Server chạy bằng Docker
 
 ```bash
-mvn clean package
+copy .env.example .env      # sửa DB_PASSWORD và JWT_SECRET
+docker compose up -d --build
 ```
 
-Build riêng từng module:
+Mở `http://<IP-Server>:3000`. Dữ liệu MySQL nằm trong volume `ztna_mysql`.
+
+### Cách B – Chạy tay (Eclipse + XAMPP + VS Code)
+
+1. Bật MySQL trong XAMPP.
+2. Eclipse: Import → Existing Maven Projects → chọn thư mục gốc. Chạy `ZtnaServerApplication` (Run As → Java Application).
+   Nếu MySQL của XAMPP không có mật khẩu: Run Configurations → Environment → thêm `DB_PASSWORD` với giá trị rỗng
+   (hoặc tab Arguments, ô Program arguments: `--spring.datasource.password=`).
+3. Giao diện: `cd ztna-portal-ui && npm ci && npm run dev`, mở `http://<IP-Server>:3000`.
+
+### Máy chạy Connector (mạng nội bộ)
+
+1. Trên giao diện admin, tạo connector (hoặc dùng connector mẫu), lấy Connection String.
+2. Tạo các ứng dụng (Resource) trỏ tới `host:port` mà **máy connector** truy cập được.
+3. Chạy:
 
 ```bash
-mvn -pl ztna-server -am clean package
-
-mvn -pl connector -am clean package
-
-mvn -pl agent -am clean package
+./ztna-server/mvnw -f pom.xml -DskipTests package
+set SERVER_URL=ws://<IP-Server>:8443/connector
+set CONNECTOR_TOKEN=<Connection String>
+java -jar connector/target/connector-1.0-SNAPSHOT.jar
 ```
 
-## 8. Thứ tự khởi chạy
+Docker: xem `connector/Dockerfile` và các file `connector/docker-compose-*.yml` (sửa `SERVER_URL`, `CONNECTOR_TOKEN` cho đúng).
 
-1. Khởi động MySQL và cấu hình database cho ZTNA Server.
-2. Khởi động ZTNA Server.
-3. Khởi động Connector và cấu hình địa chỉ Server cùng các resource nội bộ.
-4. Khởi động Agent và cấu hình địa chỉ Server.
-5. Đăng nhập và thực hiện yêu cầu truy cập resource.
+### Máy người dùng (Agent)
 
-Các port và thông tin kết nối cần lấy từ cấu hình thực tế của từng module, không sử dụng port của prototype cũ.
+```bash
+java -jar agent/target/agent-1.0-SNAPSHOT.jar ws://<IP-Server>:9443/app
+```
 
-## 9. Tài liệu thiết kế
+Mở `http://<IP-Server>:3000`, đăng nhập bằng tài khoản người dùng, bấm mở ứng dụng. Agent mở một cổng local ngẫu nhiên và chạy trình mở ứng dụng tương ứng (Chrome cho web).
 
-| File | Nội dung |
-|---|---|
-| `architecture.md` | Kiến trúc hệ thống, thành phần và trust boundary |
-| `design.md` | Thiết kế chi tiết, protocol, session và xử lý dữ liệu |
-| `flow.md` | Các luồng xử lý của hệ thống |
-| `sql.md` | Mô hình dữ liệu và database |
+### Kịch bản kiểm tra quyền khi demo
+
+1. Người dùng chưa có rule: mở ứng dụng bị từ chối (403), log truy cập ghi DENY.
+2. Admin tạo rule cho người dùng: mở được, log ghi ALLOW, phiên hiện ở dashboard.
+3. Trong lúc đang dùng, admin tắt rule hoặc khoá người dùng: phiên bị cắt ngay, token cũ không gọi được API nữa.
+4. Admin tắt connector: kết nối của connector bị ngắt, connector không đăng ký lại được cho tới khi bật lại.
+
+Lưu ý: Agent và Server phải cùng phiên bản (giao thức frame đã thay đổi).
+
+## 9. Build
+
+```bash
+./ztna-server/mvnw -f pom.xml -DskipTests package     # server, connector, agent (máy không có mvn)
+cd ztna-portal-ui && npm run build                   # giao diện
+```
+
+Jar tạo ra: `ztna-server/target/ztna-server-0.0.1-SNAPSHOT.jar`, `connector/target/connector-1.0-SNAPSHOT.jar`, `agent/target/agent-1.0-SNAPSHOT.jar` (đều chạy bằng `java -jar`).
 
 ## 10. Phạm vi và giới hạn
 

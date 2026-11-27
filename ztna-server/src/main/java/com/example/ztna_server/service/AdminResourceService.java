@@ -21,6 +21,8 @@ import com.example.ztna_server.runtime.routing.RoutingRegistry;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import com.example.ztna_server.event.AccessPolicyChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -41,6 +43,7 @@ public class AdminResourceService {
     private final ConnectorRepository connectorRepository;
     private final ResourceMapper resourceMapper;
     private final AuditService auditService;
+    private final ApplicationEventPublisher eventPublisher;   // báo thay đổi quyền để đóng phiên không còn hợp lệ
 
     private final RoutingRegistry routingRegistry;              // tra cứu in-memory
     private final RoutingBootstrap routingBootstrap;             // refresh từ DB
@@ -124,6 +127,7 @@ public class AdminResourceService {
         resourceRepository.saveAndFlush(resource);
 
         // Ghi audit log
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent("UPDATE_RESOURCE"));
         auditService.log(
                 "UPDATE_RESOURCE",
                 TargetType.RESOURCE,
@@ -144,6 +148,7 @@ public class AdminResourceService {
         resourceRepository.saveAndFlush(resource);
 
         // Ghi audit log
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent(enabled ? "ENABLE_RESOURCE" : "DISABLE_RESOURCE"));
         auditService.log(
                 enabled ? "ENABLE_RESOURCE" : "DISABLE_RESOURCE",
                 TargetType.RESOURCE,
@@ -169,6 +174,7 @@ public class AdminResourceService {
         }
 
         // Ghi audit log
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent("DELETE_RESOURCE"));
         auditService.log(
                 "DELETE_RESOURCE",
                 TargetType.RESOURCE,

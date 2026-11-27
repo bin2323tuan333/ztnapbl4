@@ -8,12 +8,7 @@ export default defineConfig({
         host: true,
         allowedHosts: true,
         port: 3000,
-        proxy: {
-            '/api': {
-                target: 'http://localhost:8080',
-                changeOrigin: true,
-            },
-        },
+        // Không dùng proxy: apiClient gọi thẳng http://<hostname>:443 để chạy được qua LAN
     },
     resolve: {
         alias: {

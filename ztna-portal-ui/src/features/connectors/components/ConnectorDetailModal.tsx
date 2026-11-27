@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Clock, Info, Server, Link } from 'lucide-react';
+import { X, Clock, Info, Link } from 'lucide-react';
 import { connectorApi, type ConnectorDetail } from '../api/connectorApi';
 import { ConnectorIcon } from './ConnectorIcon';
 import '../styles/ConnectorDetailModal.css';
