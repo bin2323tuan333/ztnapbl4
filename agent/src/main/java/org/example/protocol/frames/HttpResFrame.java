@@ -12,6 +12,7 @@ public class HttpResFrame extends Frame {
     public static final byte STATUS_CONNECTOR_OFFLINE = 0x02;
     public static final byte STATUS_INTERNAL_ERROR    = 0x03;
     public static final byte STATUS_AUTH_FAILED       = 0x04;
+    public static final byte STATUS_FORBIDDEN         = 0x05; // đã xác thực nhưng không có rule cho phép
 
     private String requestId;
     private String streamId;

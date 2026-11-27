@@ -250,6 +250,33 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
             return;
         }
 
+        // Kiểm rule ngay ở HTTP_ACCESS: không có quyền thì không cấp vé, Agent không mở cổng / trình duyệt,
+        // và log ghi DENY (trước đây ghi ALLOW "Xác thực thành công" làm thống kê sai).
+        // Kiểm trước trạng thái connector để người không có quyền không biết được connector đang online hay không.
+        if (!ruleService.hasAccess(userId, resource.getId())) {
+            log.warn("[Lifecycle] HTTP_ACCESS bị từ chối: không có quyền, reqId={}, user={}, resource={}, ip={}",
+                    reqId, uid, resource.getName(), ip);
+            accessLogService.log(
+                    userId,
+                    ip,
+                    authed.getFullName(),
+                    resource.getId(),
+                    resource.getName(),
+                    resource.getHost(),
+                    connector.getId(),
+                    connector.getName(),
+                    Decision.DENY,
+                    "Không có quyền truy cập Resource"
+            );
+            sendHttpFail(
+                    ctx,
+                    reqId,
+                    HttpResFrame.STATUS_FORBIDDEN,
+                    "Bạn không có quyền truy cập ứng dụng này"
+            );
+            return;
+        }
+
         if (!connectorConnectionRegistry.isOnline(target.connectorId())) {
             log.warn("[Lifecycle] Connector offline: reqId={}, connector={}, resource={}",
                     reqId, target.connectorId(), resourceId);

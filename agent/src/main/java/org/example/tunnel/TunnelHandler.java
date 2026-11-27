@@ -145,9 +145,13 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
             status = HttpResponseStatus.OK;
             jsonBody = "{\"status\":\"success\",\"port\":" + port + "}";
         } else {
-            status = resFrame.getStatus() == HttpResFrame.STATUS_AUTH_FAILED
-                    ? HttpResponseStatus.UNAUTHORIZED
-                    : HttpResponseStatus.INTERNAL_SERVER_ERROR;
+            if (resFrame.getStatus() == HttpResFrame.STATUS_AUTH_FAILED) {
+                status = HttpResponseStatus.UNAUTHORIZED;
+            } else if (resFrame.getStatus() == HttpResFrame.STATUS_FORBIDDEN) {
+                status = HttpResponseStatus.FORBIDDEN;   // đã đăng nhập nhưng không có rule cho phép
+            } else {
+                status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+            }
             jsonBody = "{\"error\":\"" + resFrame.getReason() + "\"}";
         }
         FullHttpResponse response = new DefaultFullHttpResponse(
