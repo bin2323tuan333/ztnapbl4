@@ -10,6 +10,7 @@ import com.example.ztna_server.protocol.frames.*;
 import com.example.ztna_server.repository.ConnectorRepository;
 import com.example.ztna_server.repository.ResourceRepository;
 import com.example.ztna_server.repository.UserRepository;
+import com.example.ztna_server.runtime.connection.agent.AccessTicketRegistry;
 import com.example.ztna_server.runtime.connection.agent.AgentConnection;
 import com.example.ztna_server.runtime.connection.agent.AgentConnectionRegistry;
 import com.example.ztna_server.runtime.connection.agent.PendingConnect;
@@ -56,7 +57,9 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
     private final PendingConnectRegistry pendingConnectRegistry;
     private final RuleService ruleService;
     private final RelayEngine relayEngine;
-    private volatile String userId;
+    private final AccessTicketRegistry accessTicketRegistry;
+    // Không lưu "userId của kết nối": một Agent có thể được nhiều người dùng chung.
+    // Danh tính đi theo từng vé (AccessTicketRegistry) do HTTP_ACCESS cấp.
 
 
     @Override
@@ -276,21 +279,9 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
 
 
 
-        AgentConnection currentForUId = agentConnectionRegistry.getByUserId(uid);
-        if (this.userId == null) {
-            if (currentForUId == null) {
-                agentConnectionRegistry.register(uid, ctx.channel());
-                log.info("Ket noi thanh cong tu {}", uid);
-            } else {
-                agentConnectionRegistry.removeByUserId(uid);
-                agentConnectionRegistry.register(uid, ctx.channel());
-                log.info("Ket noi lai tu {}", uid);
-            }
-            this.userId = uid;
-        } else if (!this.userId.equals(uid)) {
-            log.warn("[Lifecycle] User mismatch: expected={}, received={}, reqId={}", this.userId, uid, reqId);
-            agentConnectionRegistry.changeUser(this.userId, uid);
-        }
+        // Cấp vé gắn với đúng người dùng + ứng dụng + kênh Agent này.
+        // Agent gửi lại vé trong mỗi RESOURCE_ACCESS để Server biết ai đang xin mở kết nối.
+        AccessTicketRegistry.AccessTicket ticket = accessTicketRegistry.issue(uid, resource.getId().toString(), ctx.channel());
 
         log.info("[Lifecycle] HTTP_ACCESS OK: reqId={}, user={}, resource={}, connector={}, ip={}", reqId, uid, resource.getName(), connector.getName(), ip);
 
@@ -307,7 +298,8 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
                 "Xác thực thành công"
         );
 
-        HttpResFrame response = HttpResFrame.ok(reqId, "");
+        // Trường streamId của HTTP_RESPONSE trước đây bỏ trống, nay dùng để gửi vé về Agent
+        HttpResFrame response = HttpResFrame.ok(reqId, ticket.ticket());
         ctx.writeAndFlush(
                 new BinaryWebSocketFrame(
                         Unpooled.wrappedBuffer(response.encode())
@@ -333,12 +325,15 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
             return;
         }
 
-        String uid = this.userId;
-        AgentConnection agent = agentConnectionRegistry.getByUserId(uid);
-        if (agent == null || agent.getChannel() != ctx.channel() || !agent.isActive()) {
-            sendResourceFail(ctx, reqId, "Agent connection không hợp lệ hoặc đã hết hạn");
+        // Lấy người dùng từ vé, không dùng trạng thái chung của kết nối.
+        // Vé phải do chính kênh này nhận và đúng ứng dụng đang xin truy cập.
+        AccessTicketRegistry.AccessTicket ticket = accessTicketRegistry.get(req.getTicket());
+        if (ticket == null || ticket.agentChannel() != ctx.channel() || !ticket.resourceId().equals(resourceId)) {
+            log.warn("[Gateway] Vé truy cập không hợp lệ: reqId={}, appId={}, ip={}", reqId, resourceId, ip);
+            sendResourceFail(ctx, reqId, "Vé truy cập không hợp lệ hoặc đã hết hạn, hãy mở lại ứng dụng từ Portal");
             return;
         }
+        String uid = ticket.userId();
 
         RouteTarget target = routingRegistry.getByResourceId(resourceId);
         if (target == null) {
@@ -407,6 +402,7 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
                 .requestId(reqId)
                 .streamId(streamId)
                 .connectorId(connectorConnection.getConnectorId())
+                .agentChannel(ctx.channel())
                 .build();
         pendingConnectRegistry.add(pending);
         ConnectFrame connectFrame = new ConnectFrame(streamId, resourceId);
@@ -455,10 +451,10 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        if (userId == null) return;
-        log.info("[User] {} disconnected", userId);
+        log.info("[User] Agent disconnected: {}", clientIp(ctx));
         userManager.removeByChannel(ctx.channel());
-        sessionLifecycleService.onAgentDisconnect(userId);
+        accessTicketRegistry.removeByChannel(ctx.channel());
+        sessionLifecycleService.onAgentChannelClosed(ctx.channel());
     }
 
     @Override

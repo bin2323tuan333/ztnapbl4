@@ -115,7 +115,8 @@ public class TunnelHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         String jsonBody;
 
         if (resFrame.isOk()) {
-            LocalServer server = new LocalServer(resourceId);
+            // Vé truy cập Server gửi về trong trường streamId của HTTP_RESPONSE
+            LocalServer server = new LocalServer(resourceId, resFrame.getStreamId());
             int port = server.start();
 
             String type = pendingHttpRequest.getTypes(reqId);

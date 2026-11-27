@@ -6,34 +6,51 @@ import org.example.protocol.FrameType;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * RESOURCE_ACCESS: Agent xin mở một stream TCP tới ứng dụng.
+ *
+ * Format payload: [reqIdLen 4B][reqId][appIdLen 4B][appId][ticketLen 4B][ticket]
+ * ticket = vé Server cấp trong HTTP_RESPONSE, cho biết ai đang xin truy cập
+ * (một Agent có thể được nhiều người dùng chung). Phần ticket là tuỳ chọn khi decode
+ * để không vỡ khi nhận frame kiểu cũ; Server sẽ từ chối nếu thiếu vé.
+ */
 public class ResourceAccessFrame extends Frame {
 
     private String requestId;
     private String appId;
+    private String ticket = "";
 
     public ResourceAccessFrame() {
         super(FrameType.RESOURCE_ACCESS);
     }
 
     public ResourceAccessFrame(String requestId, String appId) {
+        this(requestId, appId, "");
+    }
+
+    public ResourceAccessFrame(String requestId, String appId, String ticket) {
         super(FrameType.RESOURCE_ACCESS);
         this.requestId = (requestId == null ? "" : requestId);
         this.appId = (appId == null ? "" : appId);
+        this.ticket = (ticket == null ? "" : ticket);
     }
 
     @Override
     public byte[] encodePayload() {
         byte[] reqIdBuf = requestId.getBytes(StandardCharsets.UTF_8);
         byte[] appIdBuf = appId.getBytes(StandardCharsets.UTF_8);
+        byte[] ticketBuf = ticket.getBytes(StandardCharsets.UTF_8);
 
-        // Format: [reqIdLen 4B][reqId N][appIdLen 4B][appId M]
-        ByteBuffer bb = ByteBuffer.allocate(4 + reqIdBuf.length + 4 + appIdBuf.length);
+        ByteBuffer bb = ByteBuffer.allocate(4 + reqIdBuf.length + 4 + appIdBuf.length + 4 + ticketBuf.length);
 
         bb.putInt(reqIdBuf.length);
         bb.put(reqIdBuf);
 
         bb.putInt(appIdBuf.length);
         bb.put(appIdBuf);
+
+        bb.putInt(ticketBuf.length);
+        bb.put(ticketBuf);
 
         return bb.array();
     }
@@ -45,26 +62,23 @@ public class ResourceAccessFrame extends Frame {
         }
 
         ByteBuffer bb = ByteBuffer.wrap(payload);
+        this.requestId = readString(bb, "reqIdLen");
+        this.appId = readString(bb, "appIdLen");
+        // Frame kiểu cũ không có ticket
+        this.ticket = bb.remaining() >= 4 ? readString(bb, "ticketLen") : "";
+    }
 
-        // 1. Đọc requestId
-        int reqIdLen = bb.getInt();
-        if (reqIdLen < 0 || reqIdLen > bb.remaining()) {
-            throw new IllegalArgumentException("reqIdLen không hợp lệ: " + reqIdLen);
+    private static String readString(ByteBuffer bb, String name) {
+        int len = bb.getInt();
+        if (len < 0 || len > bb.remaining()) {
+            throw new IllegalArgumentException(name + " không hợp lệ: " + len);
         }
-        byte[] reqIdBuf = new byte[reqIdLen];
-        bb.get(reqIdBuf);
-        this.requestId = new String(reqIdBuf, StandardCharsets.UTF_8);
-
-        // 2. Đọc appId
-        int appIdLen = bb.getInt();
-        if (appIdLen < 0 || appIdLen > bb.remaining()) {
-            throw new IllegalArgumentException("appIdLen không hợp lệ: " + appIdLen);
-        }
-        byte[] appIdBuf = new byte[appIdLen];
-        bb.get(appIdBuf);
-        this.appId = new String(appIdBuf, StandardCharsets.UTF_8);
+        byte[] buf = new byte[len];
+        bb.get(buf);
+        return new String(buf, StandardCharsets.UTF_8);
     }
 
     public String getRequestId() { return requestId; }
     public String getAppId()     { return appId; }
+    public String getTicket()    { return ticket; }
 }

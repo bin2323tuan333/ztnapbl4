@@ -210,10 +210,8 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
 
         if (!ack.isOk()) {
             pendingConnectRegistry.remove(streamId);
-            AgentConnection agent = agentConnectionRegistry.getByUserId(pending.getUserId());
-            if (agent != null && agent.isActive()) {
-                sendResourceFail(agent.getChannel(), pending.getRequestId(), "Connector từ chối kết nối");
-            }
+            // Gửi về đúng kênh Agent đã xin mở kết nối
+            sendResourceFail(pending.getAgentChannel(), pending.getRequestId(), "Connector từ chối kết nối");
             return;
         }
 

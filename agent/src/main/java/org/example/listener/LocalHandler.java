@@ -17,6 +17,7 @@ import java.util.UUID;
 public class LocalHandler extends SimpleChannelInboundHandler<ByteBuf> {
     private final String resourceId;
     private final String reqId;
+    private final String ticket;
 
     private final TunnelClient tunnelClient = Factory.tunnelClient;
     private final StreamRegistry streamRegistry = Factory.streamRegistry;
@@ -27,8 +28,9 @@ public class LocalHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     private final List<ByteBuf> pendingBuf = new ArrayList<>();
 
-    public LocalHandler(String resourceId) {
+    public LocalHandler(String resourceId, String ticket) {
         this.resourceId = resourceId;
+        this.ticket = ticket;
         this.reqId = UUID.randomUUID().toString();
     }
 
@@ -40,7 +42,7 @@ public class LocalHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         clientOpenRegistry.put(reqId, ctx.channel());
         // Nếu tunnel mất, TunnelClient sẽ reconnect rồi gửi request.
-        tunnelClient.sendResourceAccess(reqId, resourceId);
+        tunnelClient.sendResourceAccess(reqId, resourceId, ticket);
 
         ctx.channel().config().setAutoRead(true);
         ctx.read();

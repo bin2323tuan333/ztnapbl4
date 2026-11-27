@@ -53,8 +53,9 @@ public class SessionLifecycleService {
             return false;
         }
 
-        AgentConnection agentConnection = agentConnectionRegistry.getByUserId(c.getUserId());
-        if (agentConnection == null || !agentConnection.isActive()) {
+        // Dùng đúng kênh Agent đã gửi RESOURCE_ACCESS (nhiều người dùng có thể chung một Agent)
+        Channel agentChannel = c.getAgentChannel();
+        if (agentChannel == null || !agentChannel.isActive()) {
             pendingConnectRegistry.remove(streamId);
             return false;
         }
@@ -62,14 +63,14 @@ public class SessionLifecycleService {
         ConnectorConnection connectorConnection = connectorConnectionRegistry.getByConnectorId(c.getConnectorId());
         if (connectorConnection == null || !connectorConnection.isActive()) {
             pendingConnectRegistry.remove(streamId);
-            sendResourceFail(agentConnection.getChannel(), c.getRequestId(), "Connector offline");
+            sendResourceFail(agentChannel, c.getRequestId(), "Connector offline");
             return false;
         }
 
         User user = userRepository.findById(UUID.fromString(c.getUserId())).orElse(null);
         if (user == null || !Boolean.TRUE.equals(user.getEnabled())) {
             pendingConnectRegistry.remove(streamId);
-            sendResourceFail(agentConnection.getChannel(), c.getRequestId(), "Tài khoản đã bị khóa");
+            sendResourceFail(agentChannel, c.getRequestId(), "Tài khoản đã bị khóa");
             return false;
         }
 
@@ -78,7 +79,7 @@ public class SessionLifecycleService {
                 .userId(c.getUserId())
                 .connectorId(c.getConnectorId())
                 .resourceId(c.getResourceId())
-                .agentChannel(agentConnection.getChannel())
+                .agentChannel(agentChannel)
                 .connectorChannel(connectorConnection.getChannel())
                 .state(SessionState.ACTIVE)
                 .build();
@@ -86,7 +87,7 @@ public class SessionLifecycleService {
         sessionManager.add(session);
         pendingConnectRegistry.remove(streamId);
 
-        agentConnection.getChannel().writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(
+        agentChannel.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(
                 new ResourceResFrame(c.getRequestId(), streamId, ResourceResFrame.STATUS_OK, "").encode()
         ))).addListener(f -> {
             if (!f.isSuccess()) {
@@ -123,14 +124,18 @@ public class SessionLifecycleService {
     }
 
 
-    public void onAgentDisconnect(String userId) {
-        List<PendingConnect> pendingList = pendingConnectRegistry.getByUserId(userId);
-        for (PendingConnect pending : pendingList) {
-            pendingConnectRegistry.remove(pending.getStreamId());
+    /** Kênh Agent đóng: huỷ mọi yêu cầu đang chờ và đóng mọi phiên đi qua kênh đó (của mọi người dùng trên Agent). */
+    public void onAgentChannelClosed(Channel agentChannel) {
+        for (PendingConnect pending : pendingConnectRegistry.getAll()) {
+            if (pending.getAgentChannel() == agentChannel) {
+                pendingConnectRegistry.remove(pending.getStreamId());
+            }
         }
 
-        List<SessionContext> sessions = sessionManager.getByUserId(userId);
-        log.info("[Lifecycle] Agent userId {} disconnected, closing {} sessions", userId, sessions.size());
+        List<SessionContext> sessions = sessionManager.getAll().stream()
+                .filter(s -> s.getAgentChannel() == agentChannel)
+                .toList();
+        log.info("[Lifecycle] Agent disconnected, closing {} sessions", sessions.size());
         for (SessionContext session : sessions) {
             closeSession(session.getStreamId(), "AGENT_DISCONNECTED");
         }
@@ -142,8 +147,7 @@ public class SessionLifecycleService {
 
         for (PendingConnect pending : pendingList) {
             pendingConnectRegistry.remove(pending.getStreamId());
-            AgentConnection agentConnection = agentConnectionRegistry.getByUserId(pending.getUserId());
-            sendResourceFail(agentConnection.getChannel(), pending.getRequestId(), "Connector đã mất kết nối");
+            sendResourceFail(pending.getAgentChannel(), pending.getRequestId(), "Connector đã mất kết nối");
         }
 
         List<SessionContext> sessions = sessionManager.getByConnectorId(connectorId);
