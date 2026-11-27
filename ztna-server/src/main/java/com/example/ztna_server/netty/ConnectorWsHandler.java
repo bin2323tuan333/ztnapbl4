@@ -82,7 +82,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
             switch (type) {
                 case FrameType.ROUTING_REQUEST -> handleRoutingReq(ctx, data);
                 case FrameType.CONNECT_ACK -> handleConnectAck(ctx, data);
-                case FrameType.DATA -> handleData(data);
+                case FrameType.DATA -> handleData(ctx, data);
                 case FrameType.CLOSE -> handleClose(ctx, data);
                 default -> log.warn("[Connector] Unknown frame type: 0x{}", String.format("%02X", type));
             }
@@ -232,14 +232,14 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
         sessionLifecycleService.openSession(streamId);
     }
 
-    private void handleData(ByteBuf buf) {
+    private void handleData(ChannelHandlerContext ctx, ByteBuf buf) {
         byte[] data = new byte[buf.readableBytes()];
         buf.getBytes(buf.readerIndex(), data);
 
         DataFrame frame = new DataFrame();
         frame.decode(data);
 
-        RelayResult result = relayEngine.forwardToAgent(frame);
+        RelayResult result = relayEngine.forwardToAgent(frame, ctx.channel());
 
         if (result != RelayResult.SUCCESS) {
             log.warn("[Connector] DATA relay failed: streamId={}, result={}", frame.getStreamId(), result);
@@ -261,7 +261,7 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
         CloseFrame frame = new CloseFrame();
         frame.decode(data);
         log.info("[Connector] CLOSE: streamId={}, reason={}", frame.getStreamId(), frame.getReasonText());
-        sessionLifecycleService.closeSession(frame.getStreamId(), "Connector close");
+        sessionLifecycleService.closeSessionFrom(ctx.channel(), frame.getStreamId(), "Connector close");
     }
 
 

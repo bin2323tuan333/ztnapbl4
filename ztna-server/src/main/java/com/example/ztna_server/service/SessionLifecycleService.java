@@ -104,6 +104,22 @@ public class SessionLifecycleService {
         return true;
     }
 
+    /**
+     * Đóng stream theo yêu cầu của một bên (Agent hoặc Connector gửi CLOSE).
+     * Chỉ chấp nhận khi stream thuộc đúng kênh gửi, để không ai đóng được phiên của người khác.
+     */
+    public void closeSessionFrom(Channel sender, String streamId, String reason) {
+        SessionContext session = sessionManager.get(streamId);
+        if (session == null) {
+            return;
+        }
+        if (sender != session.getAgentChannel() && sender != session.getConnectorChannel()) {
+            log.warn("[Lifecycle] Bỏ qua CLOSE: stream={} không thuộc kênh gửi", streamId);
+            return;
+        }
+        closeSession(streamId, reason);
+    }
+
     public void closeSession(String streamId, String reason) {
         SessionContext session = sessionManager.get(streamId);
         if (session == null) {

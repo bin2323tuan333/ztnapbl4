@@ -84,8 +84,8 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
             switch (type) {
                 case FrameType.HTTP_ACCESS -> handleHttpAccess(ctx, buf);
                 case FrameType.RESOURCE_ACCESS -> handleResourceAccess(ctx, buf);
-                case FrameType.DATA -> handleData(buf);
-                case FrameType.CLOSE -> handleClose(buf);
+                case FrameType.DATA -> handleData(ctx, buf);
+                case FrameType.CLOSE -> handleClose(ctx, buf);
                 default -> log.warn("[User] Unknown frame: 0x{}", String.format("%02X", type));
             }
         } catch (Exception e) {
@@ -459,23 +459,23 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
         ctx.writeAndFlush(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(resp.encode())));
     }
 
-    private void handleData(ByteBuf buf) {
+    private void handleData(ChannelHandlerContext ctx, ByteBuf buf) {
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
         DataFrame frame = new DataFrame();
         frame.decode(data);
 
-        RelayResult result = relayEngine.forwardToConnector(frame);
+        RelayResult result = relayEngine.forwardToConnector(frame, ctx.channel());
     }
 
-    public void handleClose(ByteBuf buf) {
+    public void handleClose(ChannelHandlerContext ctx, ByteBuf buf) {
         byte[] data = new byte[buf.readableBytes()];
         buf.readBytes(data);
         CloseFrame frame = new CloseFrame();
         frame.decode(data);
         String streamId = frame.getStreamId();
         log.info("[User] CLOSE stream={} reason={}", streamId, frame.getReasonText());
-        sessionLifecycleService.closeSession(streamId, "CLIENT_CLOSED: " + frame.getReasonText());
+        sessionLifecycleService.closeSessionFrom(ctx.channel(), streamId, "CLIENT_CLOSED: " + frame.getReasonText());
     }
 
     @Override
