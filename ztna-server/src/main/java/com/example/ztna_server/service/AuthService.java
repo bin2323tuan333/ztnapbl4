@@ -132,6 +132,24 @@ public class AuthService {
                 );
     }
 
+    /** Thu hồi refresh token đang dùng (nếu có). Không báo lỗi khi token không tồn tại: đăng xuất luôn thành công. */
+    public void logoutByRefreshToken(String refreshTokenStr) {
+        if (refreshTokenStr == null || refreshTokenStr.isBlank()) return;
+        refreshTokenRepository.findByToken(refreshTokenStr).ifPresent(token -> {
+            User user = token.getUser();
+            refreshTokenRepository.delete(token);
+            auditService.log(
+                    user.getId(),
+                    user.getUsername(),
+                    "LOGOUT",
+                    TargetType.USER,
+                    user.getId().toString(),
+                    user.getUsername(),
+                    getClientIp()
+            );
+        });
+    }
+
     public LoginResponse refresh(String refreshTokenStr) {
         RefreshToken dbToken = refreshTokenRepository.findByToken(refreshTokenStr)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_TOKEN));
@@ -142,6 +160,10 @@ public class AuthService {
         }
 
         User user = dbToken.getUser();
+        if (!Boolean.TRUE.equals(user.getEnabled())) {
+            // Tài khoản đã bị khoá: không cấp access token mới
+            throw new AppException(ErrorCode.ACCOUNT_LOCKED);
+        }
         String newAccessToken = jwtService.generateAccessToken(user);
 
         auditService.log(

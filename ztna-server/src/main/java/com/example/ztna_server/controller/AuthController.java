@@ -46,4 +46,20 @@ public class AuthController {
         LoginResponse response = authService.refresh(refreshToken);
         return ResponseEntity.ok(response);
     }
+
+    /** Đăng xuất phía server: thu hồi refresh token trong DB và xoá cookie, để không lấy lại được access token. */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @CookieValue(name = "refresh_token", required = false) String refreshToken,
+            HttpServletResponse httpResponse
+    ) {
+        authService.logoutByRefreshToken(refreshToken);
+
+        Cookie clear = new Cookie("refresh_token", "");
+        clear.setHttpOnly(true);
+        clear.setPath("/api/v1/auth");
+        clear.setMaxAge(0);
+        httpResponse.addCookie(clear);
+        return ResponseEntity.noContent().build();
+    }
 }

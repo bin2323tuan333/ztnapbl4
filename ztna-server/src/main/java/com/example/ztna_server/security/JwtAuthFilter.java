@@ -1,5 +1,6 @@
 package com.example.ztna_server.security;
 
+import com.example.ztna_server.repository.UserRepository;
 import com.example.ztna_server.service.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -17,12 +18,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -38,11 +41,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String token = header.substring(7);
         try {
-            Claims claims = jwtService.parseClaims(token);
+            // Chỉ nhận access token; refresh token không dùng để gọi API.
+            Claims claims = jwtService.parseAccessClaims(token);
             String userId = claims.getSubject();
             String role = claims.get("role", String.class);
 
-            if (role != null) {
+            // Zero Trust: kiểm lại trạng thái tài khoản ở mỗi request, không tin JWT đến hết hạn.
+            // User bị khoá hoặc bị xoá thì token cũ mất tác dụng ngay (trước đây còn dùng được tới 15 phút).
+            boolean active = userRepository.findById(UUID.fromString(userId))
+                    .map(u -> Boolean.TRUE.equals(u.getEnabled()))
+                    .orElse(false);
+
+            if (role != null && active) {
                 var auth = new UsernamePasswordAuthenticationToken(
                         userId,
                         null,

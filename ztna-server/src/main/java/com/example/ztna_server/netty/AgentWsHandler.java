@@ -25,6 +25,7 @@ import com.example.ztna_server.service.AccessLogService;
 import com.example.ztna_server.service.JwtService;
 import com.example.ztna_server.service.RuleService;
 import com.example.ztna_server.service.SessionLifecycleService;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -117,31 +118,32 @@ public class AgentWsHandler extends SimpleChannelInboundHandler<WebSocketFrame> 
 
         String uid;
         try {
-            if (jwtService.isTokenExpired(jwt)) {
-                UUID Uid = jwtService.extractUserId(jwt);
-                User user = userRepository.findById(Uid).orElse(null);
-                log.warn("[Lifecycle] HTTP_ACCESS bị từ chối: JWT hết hạn, reqId={}, uid={}, appId={}, ip={}", reqId, Uid, resourceId, ip);
-                accessLogService.log(
-                        Uid,
-                        ip,
-                        user == null ? "Unknown" : user.getFullName(),
-                        null,
-                        resourceId,
-                        null,
-                        null,
-                        null,
-                        Decision.DENY,
-                        "JWT hết hạn"
-                );
-                sendHttpFail(
-                        ctx,
-                        reqId,
-                        HttpResFrame.STATUS_AUTH_FAILED,
-                        "Phiên đăng nhập đã hết, hãy đăng nhập lại."
-                );
-                return;
-            }
-            uid = jwtService.extractUserId(jwt).toString();
+            // Chỉ nhận access token (có claim typ=access). Refresh token hạn 7 ngày bị từ chối.
+            uid = jwtService.parseAccessClaims(jwt).getSubject();
+        } catch (ExpiredJwtException e) {
+            UUID expiredUid = null;
+            try { expiredUid = UUID.fromString(e.getClaims().getSubject()); } catch (Exception ignored) { }
+            User user = expiredUid == null ? null : userRepository.findById(expiredUid).orElse(null);
+            log.warn("[Lifecycle] HTTP_ACCESS bị từ chối: JWT hết hạn, reqId={}, uid={}, appId={}, ip={}", reqId, expiredUid, resourceId, ip);
+            accessLogService.log(
+                    expiredUid,
+                    ip,
+                    user == null ? "Unknown" : user.getFullName(),
+                    null,
+                    resourceId,
+                    null,
+                    null,
+                    null,
+                    Decision.DENY,
+                    "JWT hết hạn"
+            );
+            sendHttpFail(
+                    ctx,
+                    reqId,
+                    HttpResFrame.STATUS_AUTH_FAILED,
+                    "Phiên đăng nhập đã hết, hãy đăng nhập lại."
+            );
+            return;
         } catch (Exception e) {
             log.warn("[Lifecycle] HTTP_ACCESS bị từ chối: JWT không hợp lệ, reqId={}, appId={}, ip={}, err={}",
                     reqId, resourceId, ip, e.getMessage());
