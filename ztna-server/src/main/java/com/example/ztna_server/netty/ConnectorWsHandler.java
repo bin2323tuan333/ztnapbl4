@@ -113,6 +113,17 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
                 return;
             }
 
+            // Kiểm lại trạng thái mỗi lần connector xin routing: đã bị tắt hoặc xoá thì ngắt
+            boolean stillEnabled = connectorRepository.findById(java.util.UUID.fromString(connectorId))
+                    .map(Connector::isEnabled)
+                    .orElse(false);
+            if (!stillEnabled) {
+                log.warn("[Connector] Connector đã bị tắt hoặc xoá, ngắt kết nối: {}", connectorId);
+                connectorConnectionRegistry.removeByConnectorId(connectorId);
+                ctx.close();
+                return;
+            }
+
             sendRoutingTable(ctx);
             return;
         }
@@ -132,7 +143,10 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
             log.warn("[Connector] Replacing old connection: connectorId={}, oldConnection={}",
                     newConnectorId, oldConnection.getConnectionId());
 
-            sessionLifecycleService.onConnectorDisconnect(oldConnection.getConnectionId());
+            // Phiên đang có của connector này đều thuộc kết nối cũ: đóng hết rồi gỡ kết nối cũ
+            // (trước đây truyền nhầm connectionId vào hàm cần connectorId nên không đóng được gì)
+            sessionLifecycleService.onConnectorDisconnect(newConnectorId);
+            connectorConnectionRegistry.remove(oldConnection.getConnectionId());
         }
 
         // Đăng ký connection mới.
@@ -264,8 +278,14 @@ public class ConnectorWsHandler extends SimpleChannelInboundHandler<WebSocketFra
     public void channelInactive(ChannelHandlerContext ctx) {
         if (registered && connectorId != null && connectionId != null) {
             log.info("[Connector] Disconnected: connectorId={}, connectionId={}", connectorId, connectionId);
-            ConnectorConnection removed = connectorConnectionRegistry.getByConnectorId(connectorId);
-            if (removed != null) {
+            ConnectorConnection current = connectorConnectionRegistry.getByConnectorId(connectorId);
+            // current == null: admin đã tắt/xoá connector (registry đã gỡ trước khi kênh đóng).
+            // current là kênh này: mất kết nối bình thường. Cả hai trường hợp đều phải đóng phiên.
+            // current là kênh khác: connector đã nối lại bằng kết nối mới, không đụng phiên của kết nối mới.
+            if (current == null || current.getChannel() == ctx.channel()) {
+                if (current != null) {
+                    connectorConnectionRegistry.remove(current.getConnectionId());
+                }
                 sessionLifecycleService.onConnectorDisconnect(connectorId);
             }
         }

@@ -9,6 +9,7 @@ import com.example.ztna_server.entity.Connector;
 import com.example.ztna_server.enums.TargetType;
 import com.example.ztna_server.mapper.ConnectorMapper;
 import com.example.ztna_server.repository.ConnectorRepository;
+import com.example.ztna_server.repository.ResourceRepository;
 import com.example.ztna_server.runtime.connection.connector.ConnectorConnectionRegistry;
 import com.example.ztna_server.enums.ErrorCode;
 import com.example.ztna_server.exception.AppException;
@@ -31,6 +32,7 @@ public class ConnectorService {
     private final AuditService auditService;
     private final ApplicationEventPublisher eventPublisher;   // báo thay đổi quyền để đóng phiên không còn hợp lệ
     private final ConnectorConnectionRegistry connectorConnectionRegistry;
+    private final ResourceRepository resourceRepository;
 
 
     @Transactional(readOnly = true)
@@ -115,7 +117,8 @@ public class ConnectorService {
         connector.setUpdatedAt(Instant.now());
 
         if (!connector.isEnabled()) {
-            connectorConnectionRegistry.remove(id.toString());
+            // Ngắt kết nối WS đang mở của connector (trước đây gọi remove(connectionId) với connectorId nên không có tác dụng)
+            connectorConnectionRegistry.removeByConnectorId(id.toString());
         }
 
         Connector saved = connectorRepository.save(connector);
@@ -138,7 +141,13 @@ public class ConnectorService {
         Connector connector = connectorRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CONNECTOR_NOT_FOUND));
 
-        connectorConnectionRegistry.remove(connector.getId().toString());
+        // Còn ứng dụng thuộc connector thì không xoá (trước đây xoá dây chuyền và lỗi 500 khi ứng dụng nằm trong rule)
+        long resourceCount = resourceRepository.countByConnectorId(id);
+        if (resourceCount > 0) {
+            throw new AppException(ErrorCode.CONNECTOR_IN_USE);
+        }
+
+        connectorConnectionRegistry.removeByConnectorId(connector.getId().toString());
         String name = connector.getName();
         connectorRepository.deleteById(id);
 

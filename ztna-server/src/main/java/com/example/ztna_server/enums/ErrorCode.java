@@ -34,6 +34,7 @@ public enum ErrorCode {
     RULE_INVALID_EXPIRY(HttpStatus.BAD_REQUEST, "RULE_103", "Thời điểm hết hạn phải ở trong tương lai"),
     CONNECTOR_EXISTED(HttpStatus.CONFLICT, "CON_001", "Tên Connector đã tồn tại, vui lòng chọn tên khác"),
     CONNECTOR_NOT_FOUND(HttpStatus.NOT_FOUND, "CON_002", "Connector không tồn tại"),
+    CONNECTOR_IN_USE(HttpStatus.CONFLICT, "CON_003", "Connector đang có ứng dụng, hãy xoá hoặc chuyển các ứng dụng sang connector khác trước"),
     API_NOT_FOUND(HttpStatus.NOT_FOUND, "SYS_002", "Đường dẫn API không tồn tại"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "SYS_003", "Phương thức HTTP không được hỗ trợ cho đường dẫn này"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SYS_001", "Something went wrong");
