@@ -15,6 +15,8 @@ import com.example.ztna_server.repository.RefreshTokenRepository;
 import com.example.ztna_server.repository.UserRepository;
 import com.example.ztna_server.security.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
+import com.example.ztna_server.event.AccessPolicyChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,6 +37,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final AuditService auditService;          
+    private final ApplicationEventPublisher eventPublisher;   // báo thay đổi quyền để đóng phiên không còn hợp lệ
 
     // ───────────── Dùng nội bộ ─────────────
 
@@ -148,6 +151,7 @@ public class UserService {
             userRepository.save(user);
 
             // Ghi audit
+            eventPublisher.publishEvent(new AccessPolicyChangedEvent("BLOCK_USER"));
             auditService.log(
                     "BLOCK_USER",
                     TargetType.USER,
@@ -207,6 +211,7 @@ public class UserService {
             userRepository.flush();
 
             // Ghi audit
+            eventPublisher.publishEvent(new AccessPolicyChangedEvent("DELETE_USER"));
             auditService.log(
                     "DELETE_USER",
                     TargetType.USER,

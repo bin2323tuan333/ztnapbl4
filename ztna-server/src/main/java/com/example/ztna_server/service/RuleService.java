@@ -13,6 +13,8 @@ import com.example.ztna_server.mapper.RuleMapper;
 import com.example.ztna_server.repository.ResourceRepository;
 import com.example.ztna_server.repository.RuleRepository;
 import com.example.ztna_server.repository.UserRepository;
+import com.example.ztna_server.event.AccessPolicyChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +35,7 @@ public class RuleService {
     private final ResourceRepository resourceRepository;
     private final RuleMapper ruleMapper;
     private final AuditService auditService;   
+    private final ApplicationEventPublisher eventPublisher;   // báo thay đổi quyền để đóng phiên không còn hợp lệ
 
     @Transactional(readOnly = true)
     public List<RuleSummaryResponse> getAllRules() {
@@ -109,6 +112,7 @@ public class RuleService {
         ruleRepository.save(rule);
 
         // Audit log
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent("ASSIGN_USER_TO_RULE"));
         auditService.log(
                 "ASSIGN_USER_TO_RULE",
                 TargetType.SYSTEM,
@@ -132,6 +136,7 @@ public class RuleService {
         ruleRepository.save(rule);
 
         // Audit log
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent("ASSIGN_RESOURCE_TO_RULE"));
         auditService.log(
                 "ASSIGN_RESOURCE_TO_RULE",
                 TargetType.SYSTEM,
@@ -150,6 +155,7 @@ public class RuleService {
         rule.setUpdatedAt(Instant.now());
         ruleRepository.save(rule);
 
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent(rule.isEnabled() ? "ENABLE_RULE" : "DISABLE_RULE"));
         // Audit log
         auditService.log(
                 rule.isEnabled() ? "ENABLE_RULE" : "DISABLE_RULE",
@@ -175,6 +181,7 @@ public class RuleService {
         ruleRepository.delete(rule);
 
         // Audit log
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent("DELETE_RULE"));
         auditService.log(
                 "DELETE_RULE",
                 TargetType.SYSTEM,

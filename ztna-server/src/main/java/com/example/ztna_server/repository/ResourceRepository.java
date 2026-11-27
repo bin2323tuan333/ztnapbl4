@@ -20,6 +20,9 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
     @EntityGraph(attributePaths = {"connector"})
     List<Resource> findAllByOrderByNameAsc();
 
+    // Xác minh liên tục: ứng dụng còn bật và connector của nó còn bật
+    boolean existsByIdAndEnabledTrueAndConnectorEnabledTrue(UUID id);
+
     // Dùng cho quản lý app: kiểm tra trùng tên, đếm app của connector
     Optional<Resource> findByName(String name);
     boolean existsByName(String name);

@@ -23,9 +23,14 @@ import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.example.ztna_server.event.AccessPolicyChangedEvent;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -104,9 +109,81 @@ public class SessionLifecycleService {
         if (session == null) {
             return;
         }
+        // Xoá khỏi SessionManager trước: từ lúc này RelayEngine không chuyển tiếp DATA của stream này nữa.
+        // Nếu một luồng khác đã đóng trước thì thôi, không gửi CLOSE lần hai.
+        if (!sessionManager.closeSession(streamId, reason)) {
+            return;
+        }
         log.info("[Lifecycle] Closing session: stream={}, reason={}", streamId, reason);
         sendClose(session.getAgentChannel(), streamId);
         sendClose(session.getConnectorChannel(), streamId);
+    }
+
+    // ─────────── Xác minh liên tục (Zero Trust) ───────────
+
+    /** Admin vừa đổi rule / user / ứng dụng / connector: kiểm lại ngay sau khi DB đã commit. */
+    @TransactionalEventListener(fallbackExecution = true)
+    public void onAccessPolicyChanged(AccessPolicyChangedEvent event) {
+        revalidateSessions(event.reason());
+    }
+
+    /** Lưới an toàn: kiểm định kỳ, bắt cả trường hợp rule hết hạn theo thời gian (expiresAt). */
+    @Scheduled(fixedDelayString = "15000", initialDelayString = "15000")
+    public void revalidatePeriodically() {
+        revalidateSessions("kiểm tra định kỳ");
+    }
+
+    /**
+     * Đóng mọi phiên đang mở mà người dùng không còn quyền:
+     * tài khoản bị khoá/xoá, không còn rule đang bật và còn hạn, hoặc ứng dụng/connector bị tắt/xoá.
+     */
+    public void revalidateSessions(String trigger) {
+        List<SessionContext> sessions = sessionManager.getAll();
+        if (sessions.isEmpty()) return;
+
+        Map<String, Boolean> decisionCache = new HashMap<>(); // userId|resourceId -> còn quyền?
+        int closed = 0;
+        for (SessionContext s : sessions) {
+            String key = s.getUserId() + "|" + s.getResourceId();
+            String denyReason = decisionCache.containsKey(key)
+                    ? (decisionCache.get(key) ? null : "không còn quyền truy cập")
+                    : checkAccess(s.getUserId(), s.getResourceId());
+            decisionCache.putIfAbsent(key, denyReason == null);
+
+            if (denyReason != null) {
+                log.warn("[Lifecycle] Thu hồi phiên stream={}, user={}, resource={}: {} (do {})",
+                        s.getStreamId(), s.getUserId(), s.getResourceId(), denyReason, trigger);
+                closeSession(s.getStreamId(), "REVOKED: " + denyReason);
+                closed++;
+            }
+        }
+        if (closed > 0) {
+            log.info("[Lifecycle] Đã đóng {} phiên không còn hợp lệ (do {})", closed, trigger);
+        }
+    }
+
+    /** @return null nếu còn quyền, ngược lại là lý do bị thu hồi */
+    private String checkAccess(String userIdStr, String resourceIdStr) {
+        try {
+            UUID userId = UUID.fromString(userIdStr);
+            UUID resourceId = UUID.fromString(resourceIdStr);
+
+            User user = userRepository.findById(userId).orElse(null);
+            if (user == null || !Boolean.TRUE.equals(user.getEnabled())) {
+                return "tài khoản đã bị khoá hoặc xoá";
+            }
+            if (!resourceRepository.existsByIdAndEnabledTrueAndConnectorEnabledTrue(resourceId)) {
+                return "ứng dụng hoặc connector đã bị tắt hoặc xoá";
+            }
+            if (!ruleService.hasAccess(userId, resourceId)) {
+                return "không còn rule cho phép (rule bị tắt, xoá, hết hạn hoặc người dùng bị gỡ khỏi rule)";
+            }
+            return null;
+        } catch (Exception e) {
+            // Không kiểm được thì đóng phiên (fail-closed), đúng nguyên tắc Zero Trust
+            log.error("[Lifecycle] Lỗi khi kiểm lại quyền user={}, resource={}", userIdStr, resourceIdStr, e);
+            return "lỗi khi kiểm tra quyền";
+        }
     }
 
 

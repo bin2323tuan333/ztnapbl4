@@ -10,6 +10,8 @@ import com.example.ztna_server.enums.TargetType;
 import com.example.ztna_server.mapper.ConnectorMapper;
 import com.example.ztna_server.repository.ConnectorRepository;
 import com.example.ztna_server.runtime.connection.connector.ConnectorConnectionRegistry;
+import com.example.ztna_server.event.AccessPolicyChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,7 @@ public class ConnectorService {
     private final ConnectorRepository connectorRepository;
     private final ConnectorMapper connectorMapper;
     private final AuditService auditService;
+    private final ApplicationEventPublisher eventPublisher;   // báo thay đổi quyền để đóng phiên không còn hợp lệ
     private final ConnectorConnectionRegistry connectorConnectionRegistry;
 
 
@@ -115,6 +118,7 @@ public class ConnectorService {
 
         Connector saved = connectorRepository.save(connector);
 
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent(saved.isEnabled() ? "ENABLE_CONNECTOR" : "DISABLE_CONNECTOR"));
         // Audit log
         auditService.log(
                 saved.isEnabled() ? "ENABLE_CONNECTOR" : "DISABLE_CONNECTOR",
@@ -136,6 +140,7 @@ public class ConnectorService {
         String name = connector.getName();
         connectorRepository.deleteById(id);
 
+        eventPublisher.publishEvent(new AccessPolicyChangedEvent("DELETE_CONNECTOR"));
         auditService.log(
                 "DELETE_CONNECTOR",
                 TargetType.CONNECTOR,
